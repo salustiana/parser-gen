@@ -81,7 +81,7 @@ def parse_prods():
             curr_prod.append(nt) # add symbol to current prod
 
         if tk.type == TK_STR: # parse literal symbol
-            curr_prod.append(tk.val)
+            curr_prod.append(tk.val[1:-1]) # remove quotation marks
             next_token()
             continue
 
