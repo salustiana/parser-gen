@@ -38,6 +38,12 @@ def next_token():
     global tk
     tk = Token(*tokens.__next__())
 
+def skip_chars(chars):
+    for char in chars:
+        if tk.type != ord(char):
+            expected(chars)
+        next_token()
+
 def parse_prods():
     global tk
     global curr_nt
@@ -62,10 +68,7 @@ def parse_prods():
             next_token()
 
             if tk.type == ord(':'): # we are in a new def
-                next_token()
-                if tk.type != ord('='):
-                    expected("'='")
-                next_token()
+                skip_chars("::=")
                 # save curr_prod for this nonterm
                 grammar[curr_nt].append(curr_prod.copy())
 
@@ -100,12 +103,8 @@ def parse_bn():
     if tk.type != ord('>'):
         expected("'>'")
     next_token()
-    if tk.type != ord(':'):
-        expected("\":=\"")
-    next_token()
-    if tk.type != ord('='):
-        expected("'='")
-    next_token()
+
+    skip_chars("::=")
 
     if grammar.get(curr_nt) == None:
         grammar[curr_nt] = list()

@@ -1,8 +1,8 @@
-<expr> := <expr> "+" <term>
+<expr> ::= <expr> "+" <term>
 	| <term>
 
-<term> := <term> "*" <fact>
+<term> ::= <term> "*" <fact>
 	| <fact>
 
-<fact> := "(" <expr> ")"
-	   | <id>
+<fact> ::= "(" <expr> ")"
+	| <id>
