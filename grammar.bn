@@ -1,6 +1,8 @@
-<stmt> := <expr> ";"
-	| <if> "(" <expr> ")" <stmt>
-	| <for> "("<optexpr>";"<optexpr>";"<optexpr>")" <stmt>
+<expr> := <expr> "+" <term>
+	| <term>
 
-<optexpr> := <expr>
-	   | ""
+<term> := <term> "*" <fact>
+	| <fact>
+
+<fact> := "(" <expr> ")"
+	   | <id>
