@@ -1,4 +1,4 @@
-#include "bn_parser.h"
+#include "grammar.h"
 #include "lexer.h"
 #include "linked_list.h"
 
