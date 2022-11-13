@@ -176,15 +176,15 @@ void parse_prods()
 {
 	int more_input = 1;
 	while (more_input) {
-		if (tk.type == TK_BAR) { /* new prod for current nonterm */
+		switch (tk.type) {
+		case TK_BAR:	/* new prod for current nonterm */
 			add_prod();
 			next_token(&tk);
 			continue;
-		}
-		if (tk.type == TK_LESS) { /* parse symbol */
+		case TK_LESS:	/* parse nonterm */
 			next_token(&tk);
 			if (tk.type != TK_ID)
-				panic("expected symbol");
+				panic("expected nonterm");
 			char *nt = strdup(tk.str_val);
 			next_token(&tk);
 			if (tk.type != TK_GRT)
@@ -199,22 +199,19 @@ void parse_prods()
 				continue;
 			}
 			add_non_term(nt); /* add the nonterm to curr_prod */
-		}
-		if (tk.type == TK_STR) { /* parse literal */
-			if (*tk.str_val == '\0') {
-				more_input = next_token(&tk); /* BN could end here */
-				continue;
-			}
-			char *s = tk.str_val;
-			do {
-				/*
-				 * TODO: properly convert tokens
-				 * in string by lexing them with
-				 * match_op, match_punct, etc...
-				 */
-				add_term((enum tk_type) *s);
-			} while (*++s);
+			break;
+		case TK_BACTK:	/* parse terminal */
 			next_token(&tk);
+			add_term(tk.type);
+			next_token(&tk);
+			if (tk.type != TK_BACTK)
+				panic("expected '`'");
+			more_input = next_token(&tk); /* BN could end here */
+			break;
+		default:
+			// TODO: produce a proper error message
+			print_token(tk);
+			panic("token %d not supported by BN syntax", tk.type);
 		}
 		if (!more_input)
 			add_prod();
@@ -226,7 +223,7 @@ void parse_bn()
 	next_token(&tk);
 	skip_tks("<");
 	if (tk.type != TK_ID)
-		panic("expected symbol");
+		panic("expected starting nonterm");
 	curr_nt = strdup(tk.str_val);
 	next_token(&tk);
 	skip_tks(">::=");
