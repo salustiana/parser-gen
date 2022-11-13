@@ -1,5 +1,6 @@
 #include "bn_parser.h"
 #include "lexer.h"
+#include "linked_list.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -127,6 +128,7 @@ void add_prod()
 {
 	if (curr_prod == NULL)
 		panic("curr_prod is NULL");
+	curr_prod = reverse_linked_list(curr_prod);
 	struct prod_list *new_prod = malloc(sizeof(struct prod_list));
 	if (new_prod == NULL)
 		panic("could not allocate memory for a new production");
