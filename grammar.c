@@ -65,7 +65,7 @@ void print_prod(struct symbol_list *prod)
 		if (sp->is_tk)
 			printf("%c ", sp->tk_val);
 		else
-			printf("\"%s\" ", sp->sym_name);
+			printf("<%s> ", sp->sym_name);
 	}
 	putchar('\n');
 }
@@ -82,6 +82,7 @@ void print_prods(struct prod_list *prods)
 			printf("\t| ");
 		print_prod(pp->prod);
 	}
+	putchar('\n');
 }
 
 void print_grammar()
@@ -91,8 +92,8 @@ void print_grammar()
 			continue;
 		for (struct nt_entry *ep = grammar[i]; ep != NULL; ep = ep->next) {
 			if (ep->prods == NULL)
-				panic("nonterminal \"%s\" has no productions", ep->key);
-			printf("%s -> ", ep->key);
+				panic("nonterminal <%s> has no productions", ep->key);
+			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
 		}
 	}
