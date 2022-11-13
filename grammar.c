@@ -62,10 +62,10 @@ struct nt_entry *create_entry(const char *key)
 void print_prod(struct symbol_list *prod)
 {
 	for (struct symbol_list *sp = prod; sp != NULL; sp = sp->next) {
-		if (sp->is_term)
-			printf("%c ", sp->term_val);
+		if (sp->is_tk)
+			printf("%c ", sp->tk_val);
 		else
-			printf("\"%s\" ", sp->nt_name);
+			printf("\"%s\" ", sp->sym_name);
 	}
 	putchar('\n');
 }
@@ -140,33 +140,33 @@ void add_prod()
 }
 
 /*
- * Adds the nonterm symbol nt to
+ * Adds the non token symbol sym to
  * curr_prod.
  * XXX: the symbol is added as the
  * first element, so curr_prod is
  * stored in reverse.
  */
-void add_non_term(const char *nt)
+void add_non_tk(const char *sym)
 {
 	struct symbol_list *new_sym = malloc(sizeof(struct symbol_list));
-	new_sym->is_term = 0;
-	new_sym->nt_name = nt;
+	new_sym->is_tk = 0;
+	new_sym->sym_name = sym;
 	new_sym->next = curr_prod;
 	curr_prod = new_sym;
 }
 
 /*
- * Adds the terminal symbol term to
+ * Adds the token symbol tk_sym to
  * curr_prod.
  * XXX: the symbol is added as the
  * first element, so curr_prod is
  * stored in reverse.
  */
-void add_term(enum tk_type term)
+void add_tk(enum tk_type tk_sym)
 {
 	struct symbol_list *new_sym = malloc(sizeof(struct symbol_list));
-	new_sym->is_term = 1;
-	new_sym->term_val = term;
+	new_sym->is_tk = 1;
+	new_sym->tk_val = tk_sym;
 	new_sym->next = curr_prod;
 	curr_prod = new_sym;
 }
@@ -184,7 +184,7 @@ void parse_prods()
 			next_token(&tk);
 			if (tk.type != TK_ID)
 				panic("expected symbol");
-			char *nt = strdup(tk.str_val);
+			char *sym = strdup(tk.str_val);
 			next_token(&tk);
 			if (tk.type != TK_GRT)
 				panic("expected '>'");
@@ -192,12 +192,12 @@ void parse_prods()
 			if (tk.type == TK_COLN) { /* we are in a new def */
 				skip_tks("::=");
 				add_prod();
-				curr_nt = nt; /* start prod for new def */
+				curr_nt = sym; /* start prod for new def */
 				if (look_up(curr_nt) == NULL)
 					create_entry(curr_nt);
 				continue;
 			}
-			add_non_term(nt); /* add the nonterm to curr_prod */
+			add_non_tk(sym); /* add the symbol to curr_prod */
 		}
 		if (tk.type == TK_STR) { /* parse literal */
 			if (*tk.str_val == '\0') {
@@ -211,7 +211,7 @@ void parse_prods()
 				 * in string by lexing them with
 				 * match_op, match_punct, etc...
 				 */
-				add_term((enum tk_type) *s);
+				add_tk((enum tk_type) *s);
 			} while (*++s);
 			next_token(&tk);
 		}

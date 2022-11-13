@@ -5,9 +5,9 @@
 
 struct symbol_list {
 	struct symbol_list *next;
-	int is_term;
-	enum tk_type term_val;
-	const char *nt_name;
+	int is_tk;
+	enum tk_type tk_val;
+	const char *sym_name;
 };
 
 struct prod_list {
