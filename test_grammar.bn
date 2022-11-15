@@ -5,4 +5,4 @@
 	| <fact>
 
 <fact> ::= `(` <expr> `)`
-	| <id>
+	| `id`

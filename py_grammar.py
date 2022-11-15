@@ -30,9 +30,9 @@ def repr_sym(sym):
     if sym == BN_ES or sym == "":
         return "``"
     try:
-        ret = str(chr(sym))
+        ret = "`" + str(chr(sym)) + "`"
     except (TypeError, ValueError):
-        ret = sym
+        ret = "<" + str(sym) + ">"
     return ret
 
 
@@ -189,7 +189,46 @@ def parse_bn():
         return
 
 
-# TODO: eliminate left-recursion algorithm
+# XXX grammar must have no cycles or e-prods
+def elim_left_rec():
+    global grammar
+
+    # list the non terms in some order
+    non_terms = list()
+    for nt in grammar.keys():
+        non_terms.append(nt)
+
+    for i, nt_i in enumerate(non_terms):
+        for j, nt_j in enumerate(non_terms):
+            if j == i:
+                break
+            for p_i in range(len(grammar[nt_i])):
+                if grammar[nt_i][p_i][0] == nt_j:
+                    prod_tail = grammar[nt_i].pop(p_i)[1:]
+                    for j_prod in grammar[nt_j]:
+                        grammar[nt_i].append(j_prod + prod_tail)
+
+        # eliminate immediate left recursion for nt_i
+        left_rec_prod_tails = list()
+        non_left_rec_prods = list()
+        for prod in grammar[nt_i]:
+            if prod[0] == nt_i:
+                left_rec_prod_tails.append(prod[1:])
+            else:
+                non_left_rec_prods.append(prod)
+
+        if not left_rec_prod_tails:
+            continue
+
+        grammar[nt_i] = list()
+        nt_i_prime = nt_i + "_1"
+        create_entry(nt_i_prime, grammar)
+        for nlrp in non_left_rec_prods:
+            grammar[nt_i].append(nlrp + [nt_i_prime])
+        for lrpt in left_rec_prod_tails:
+            grammar[nt_i_prime].append(lrpt + [nt_i_prime])
+        grammar[nt_i_prime].append([BN_ES])
+
 
 first_tab = dict()
 
@@ -229,8 +268,10 @@ def compute_first_tab():
 
 if __name__ == "__main__":
     parse_bn()
-    compute_first_tab()
+    elim_left_rec()
 
     print_grammar()
+    compute_first_tab()
+
     for sym in grammar.keys():
         print_first(sym)
