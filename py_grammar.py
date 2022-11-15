@@ -189,7 +189,9 @@ def parse_bn():
         return
 
 
-# XXX grammar must have no cycles or e-prods
+# TODO: algorithm to remove cycles and e-prods
+
+# XXX: grammar must have no cycles or e-prods
 def elim_left_rec():
     global grammar
 
@@ -199,6 +201,12 @@ def elim_left_rec():
         non_terms.append(nt)
 
     for i, nt_i in enumerate(non_terms):
+        # replace prods of the form nt_i -> nt_j x
+        # for nt_i -> y1 x | y2 x ... | yk x
+        # where x is any symbol string and yn are
+        # all current nt_j productions (immediate left
+        # recursion for nt_j has already been eliminated,
+        # because j < i)
         for j, nt_j in enumerate(non_terms):
             if j == i:
                 break
