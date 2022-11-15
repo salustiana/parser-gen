@@ -5,8 +5,10 @@ from collections import namedtuple
 TK_STR = 149
 TK_ID = 150
 BN_ES = -8
+TK_EOF = -1
 
 grammar = dict()
+start_sym = ""
 Token = namedtuple("Token", ["type", "str_val"])
 tk = Token(0, 0)
 curr_nt = ""
@@ -99,6 +101,12 @@ def print_first(sym):
     print("\t", [repr_sym(s) for s in first_tab[sym]])
 
 
+def print_follow(nt):
+    global follow_tab
+    print("FOLLOW(", nt, "): ", sep="")
+    print("\t", [repr_sym(s) for s in follow_tab[nt]])
+
+
 def parse_prods():
     global tk
     global curr_nt
@@ -162,6 +170,7 @@ def parse_bn():
     global tk
     global curr_nt
     global curr_prod
+    global start_sym
 
     next_token()
     if tk.type != ord('<'):
@@ -171,6 +180,7 @@ def parse_bn():
         expected("\"symbol\"")
 
     curr_nt = tk.str_val
+    start_sym = curr_nt
     next_token()
 
     if tk.type != ord('>'):
@@ -190,6 +200,7 @@ def parse_bn():
 
 
 # TODO: algorithm to remove cycles and e-prods
+# all nullable nonterms can be found with FIRST(nonterm)
 
 # XXX: grammar must have no cycles or e-prods
 def elim_left_rec():
@@ -274,12 +285,79 @@ def compute_first_tab():
     for sym in grammar.keys():
         first(sym)
 
+
+def first_of_sym_string(sym_list):
+    ret = list()
+    all_have_es = 1
+    added_es = 1
+    for sym in sym_list:
+        if not added_es:
+            all_have_es = 0
+            break
+        added_es = 0
+        for s in first(sym):
+            if s == BN_ES:
+                added_es = 1
+            else:
+                ret.append(s)
+    # add the empty string only if every
+    # symbol in the string is nullable
+    if all_have_es:
+        ret.append(BN_ES)
+    return ret
+
+
+follow_tab = dict()
+
+def compute_follow_tab():
+    global follow_tab
+    global start_sym
+
+    create_entry(start_sym, follow_tab)
+    follow_tab[start_sym].append(TK_EOF)
+
+    added_to_follow = 1
+    while added_to_follow:
+        added_to_follow = 0
+        for nt in grammar.keys():
+            for prod in grammar[nt]:
+                for i, s in enumerate(prod):
+                    if type(s) != str: # if s is not nonterm
+                        continue
+
+                    if follow_tab.get(s) == None:
+                        create_entry(s, follow_tab)
+
+                    # if A -> xBy add {FIRST(y) - BN_ES} to FOLLOW(B)
+                    # (where x and y are strings)
+                    if i < (len(prod)-1):
+                        for term in first_of_sym_string(prod[i+1:]):
+                            if term != BN_ES and term not in follow_tab[s]:
+                                follow_tab[s].append(term)
+                                added_to_follow = 1
+
+                    # if A->xB or (A->xBy and BN_ES is in FIRST(y))
+                    # then add FOLLOW(A) to FOLLOW(B)
+                    if i == (len(prod)-1) or (
+                            BN_ES not in first_of_sym_string(prod[i+1:])
+                    ):
+                        for term in follow_tab[nt]:
+                            if term not in follow_tab[s]:
+                                follow_tab[s].append(term)
+                                added_to_follow = 1
+
+
+
 if __name__ == "__main__":
     parse_bn()
     elim_left_rec()
-
     print_grammar()
-    compute_first_tab()
 
-    for sym in grammar.keys():
-        print_first(sym)
+    compute_first_tab()
+    for nt in grammar.keys():
+        print_first(nt)
+    print()
+
+    compute_follow_tab()
+    for nt in grammar.keys():
+        print_follow(nt)
