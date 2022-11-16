@@ -8,8 +8,10 @@ BN_ES = -8
 TK_EOF = -1
 
 grammar = dict()
+symbols = list()
 start_sym = ""
 Token = namedtuple("Token", ["type", "str_val"])
+Item = namedtuple("Item", ["head", "body", "dot"])
 tk = Token(0, 0)
 curr_nt = ""
 curr_prod = list()
@@ -26,18 +28,34 @@ def print_token(tk):
 
 def repr_sym(sym):
     if sym == TK_ID:
-        return "`id`"
+        return "TK_ID"
     if sym == TK_STR:
-        return "`str`"
+        return "TK_STR"
     if sym == BN_ES or sym == "":
         return "``"
     if sym == TK_EOF:
-        return "`EOF`"
+        return "$"
     try:
-        ret = "`" + str(chr(sym)) + "`"
+        rep = "`" + str(chr(sym)) + "`"
     except (TypeError, ValueError):
-        ret = "<" + str(sym) + ">"
-    return ret
+        rep = "<" + str(sym) + ">"
+    return rep
+
+
+def repr_item(item):
+    rep = "[" + item.head + " ->"
+    if item.dot == len(item.body):
+        for sym in item.body:
+            rep += " " + repr_sym(sym)
+        rep += " o]"
+        return rep
+
+    for i, sym in enumerate(item.body):
+        if item.dot == i:
+            rep += " o"
+        rep += " " + repr_sym(sym)
+    rep += "]"
+    return rep
 
 
 def tk_gen():
@@ -111,6 +129,7 @@ def print_follow(nt):
 
 def parse_prods():
     global tk
+    global symbols
     global curr_nt
     global curr_prod
 
@@ -141,17 +160,20 @@ def parse_prods():
                     create_entry(curr_nt, grammar)
                 continue
             curr_prod.append(nt) # add the nonterm to curr_prod
+            symbols.append(nt)
 
         elif tk.type == ord('`'): # parse a terminal
             next_token()
             if tk.type == ord('`'): # empty string (``)
                 curr_prod.append(BN_ES)
+                # XXX empty string is not added to symbol list
                 try: # BN could end here
                     next_token()
                 except StopIteration:
                     more_input = 0
                 continue
             curr_prod.append(tk.type)
+            symbols.append(tk.type)
             next_token()
             if tk.type != ord('`'):
                 expected("'`'")
@@ -170,6 +192,7 @@ def parse_prods():
 
 def parse_bn():
     global tk
+    global symbols
     global curr_nt
     global curr_prod
     global start_sym
@@ -182,6 +205,7 @@ def parse_bn():
         expected("\"symbol\"")
 
     curr_nt = tk.str_val
+    symbols.append(curr_nt)
     start_sym = curr_nt
     next_token()
 
@@ -195,10 +219,90 @@ def parse_bn():
         grammar[curr_nt] = list()
     curr_prod = list()
 
-    try:
-        parse_prods()
-    except StopIteration:
-        return
+    parse_prods()
+
+
+def augment_grammar():
+    global grammar
+    global start_sym
+
+    new_start_sym = start_sym + "_s"
+    create_entry(new_start_sym, grammar)
+    grammar[new_start_sym].append([start_sym])
+    start_sym = new_start_sym
+
+
+def closure(items):
+    global grammar
+
+    clos = items.copy()
+
+    # create a boolean array indexed
+    # by the nonterminals of the grammar
+    added = dict()
+    for key in grammar.keys():
+        added[key] = 0
+
+    added_to_clos = 1
+    while added_to_clos:
+        added_to_clos = 0
+        for item in clos:
+            # if there is no nonterminal after the dot, continue
+            if item.dot >= len(item.body) or type(item.body[item.dot]) != str:
+                continue
+            if added[item.body[item.dot]]:
+                continue
+            # this adds nonkernel items to memory
+            for prod in grammar[item.body[item.dot]]:
+                clos.append(
+                    Item(
+                        head=item.body[item.dot],
+                        body=prod,
+                        dot=0,
+                    )
+                )
+            added[item.body[item.dot]] = 1
+            added_to_clos = 1
+    return clos
+
+
+def goto(items, symbol):
+    global grammar
+
+    go = list()
+
+    for item in items:
+        if item.dot < len(item.body) and item.body[item.dot] == symbol:
+            go.append(
+                Item(
+                    head=item.head,
+                    body=item.body,
+                    dot=item.dot + 1,
+                )
+            )
+    return closure(go)
+
+
+canon = list()
+
+def compute_canon():
+    global grammar
+    global symbols
+    global start_sym
+    global canon
+
+    # C = {CLOSURE({[S'->.S]})}
+    canon = [closure([Item(head=start_sym, body=grammar[start_sym][0], dot=0)])]
+
+    added_to_canon = 1
+    while added_to_canon:
+        added_to_canon = 0
+        for items in canon:
+            for symbol in symbols:
+                go = goto(items, symbol)
+                if go and go not in canon:
+                    canon.append(go)
+                    added_to_canon = 1
 
 
 # TODO: algorithm to remove cycles and e-prods
@@ -255,6 +359,7 @@ first_tab = dict()
 
 def first(symbol):
     global grammar
+    global first_tab
 
     if type(symbol) == int: # symbol is a terminal
         return [symbol] # FIRST(term) = { term }
@@ -362,10 +467,17 @@ def compute_follow_tab():
                                 added_to_follow = 1
 
 
+def print_canon():
+    for i, items in enumerate(canon):
+        print("I_", i, sep="")
+        for item in items:
+            print("\t", repr_item(item), sep="")
+
 
 if __name__ == "__main__":
     parse_bn()
     #elim_left_rec()
+    augment_grammar()
     print_grammar()
 
     compute_first_tab()
@@ -376,3 +488,6 @@ if __name__ == "__main__":
     compute_follow_tab()
     for nt in grammar.keys():
         print_follow(nt)
+
+    compute_canon()
+    print_canon()
