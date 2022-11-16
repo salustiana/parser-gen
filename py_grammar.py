@@ -31,6 +31,8 @@ def repr_sym(sym):
         return "`str`"
     if sym == BN_ES or sym == "":
         return "``"
+    if sym == TK_EOF:
+        return "`EOF`"
     try:
         ret = "`" + str(chr(sym)) + "`"
     except (TypeError, ValueError):
@@ -251,7 +253,6 @@ def elim_left_rec():
 
 first_tab = dict()
 
-# XXX grammar must have no left-recursion
 def first(symbol):
     global grammar
 
@@ -262,21 +263,35 @@ def first(symbol):
         return first_tab[symbol]
 
     create_entry(symbol, first_tab)
-    for prod in grammar[symbol]:
-        # add FIRST(sym) for every sym in the prod,
-        # until sym cannot be reduced to the empty string
-        # (BN_ES is not in first(sym))
-        added_es = 1
-        for sym in prod:
-            if not added_es:
-                break
+    added_to_first = 1
+    while added_to_first:
+        added_to_first = 0
+        for prod in grammar[symbol]:
+            # if the first symbol in the prod is the nonterminal
+            # for which we are computing first, then we check
+            # if first_tab[symbol] already contains BN_ES.
+            # if it does, we skip the nonterminal, if it
+            # does not, we skip the production altogether
+            if prod[0] == symbol:
+                if BN_ES not in first_tab[symbol]:
+                    continue
+                prod = prod[1:]
 
-            added_es = 0
-            for s in first(sym):
-                if s not in first_tab[symbol]:
-                    first_tab[symbol].append(s)
-                if s == BN_ES:
-                    added_es = 1
+            # add FIRST(sym) for every sym in the prod,
+            # until sym cannot be reduced to the empty string
+            # (BN_ES is not in first(sym))
+            added_es = 1
+            for sym in prod:
+                if not added_es:
+                    break
+
+                added_es = 0
+                for s in first(sym):
+                    if s not in first_tab[symbol]:
+                        first_tab[symbol].append(s)
+                        added_to_first = 1
+                    if s == BN_ES:
+                        added_es = 1
 
     return first_tab[symbol]
 
@@ -350,7 +365,7 @@ def compute_follow_tab():
 
 if __name__ == "__main__":
     parse_bn()
-    elim_left_rec()
+    #elim_left_rec()
     print_grammar()
 
     compute_first_tab()
