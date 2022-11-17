@@ -4,60 +4,35 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-
-struct token tk;
-char *curr_nt;
-struct symbol_list *curr_prod;
-struct nt_entry *grammar[HASHSIZE];
-
-char *strdup(const char *s)
-{
-	char *t;
-	t = malloc((strlen(s) + 1) * sizeof(char));
-	if (t != NULL)
-		strcpy(t, s);
-	return t;
-}
-
-unsigned int hash(const char *s)
-{
-	unsigned int hash_val;
-	for (hash_val = 0; *s != '\0'; s++)
-		hash_val = (unsigned int) *s + 31*hash_val;
-	return hash_val % HASHSIZE;
-}
-
-struct nt_entry *look_up(const char *key)
-{
-	struct nt_entry *ep;
-	for (ep = grammar[hash(key)]; ep != NULL; ep = ep->next)
-		if (strcmp(key, ep->key) == 0)
-			return ep;
-	return NULL;
-}
 
 /*
- * Creates a new nt_entry for the given key,
- * with a NULL prods pointer.
- * Returns NULL if the key already exists
- * or if no memory is available.
+ * TODO: check for NULL returns from add_link, create_entry and strdup.
+ * TODO: use add_link instead of manually adding links.
+ * TODO: create a table of symbols in the grammar (to compute GOTO),
+ * solve the problem of symbols being ints and strings.
  */
-struct nt_entry *create_entry(const char *key)
-{
-	if (look_up(key) != NULL)
-		return NULL;
 
-	struct nt_entry *ep = malloc(sizeof(struct nt_entry));
-	if (ep == NULL || (ep->key = strdup(key)) == NULL)
-		return NULL;
+struct token tk;
+const char *start_sym;
+char *curr_nt;
 
-	ep->prods = NULL;
-	unsigned int hash_val = hash(key);
-	ep->next = grammar[hash_val];
-	grammar[hash_val] = ep;
-	return ep;
-}
+struct nt_entry {
+	struct nt_entry *next;
+	const char *key;
+	struct prod_list *prods;
+} *grammar[HASHSIZE];
+
+struct symbol_list {
+	struct symbol_list *next;
+	int is_term;
+	enum tk_type term_val;
+	const char *nt_name;
+} *curr_prod;
+
+struct prod_list {
+	struct prod_list *next;
+	struct symbol_list *prod;
+};
 
 void print_prod(struct symbol_list *prod)
 {
@@ -123,7 +98,7 @@ void skip_tks(const char *tk_str)
  * Adds the curr_prod to the grammar
  * entry for curr_nt, and sets
  * curr_prod to NULL (last element
- * of a linked list).
+ * of the linked list).
  */
 void add_prod()
 {
@@ -134,7 +109,7 @@ void add_prod()
 	if (new_prod == NULL)
 		panic("could not allocate memory for a new production");
 	new_prod->prod = curr_prod;
-	struct nt_entry *cnt = look_up(curr_nt);
+	struct nt_entry *cnt = look_up(curr_nt, grammar);
 	new_prod->next = cnt->prods;
 	cnt->prods = new_prod;
 	curr_prod = NULL;
@@ -194,15 +169,18 @@ void parse_prods()
 				skip_tks("::=");
 				add_prod();
 				curr_nt = nt; /* start prod for new def */
-				if (look_up(curr_nt) == NULL)
-					create_entry(curr_nt);
+				if (look_up(curr_nt, grammar) == NULL) {
+					struct nt_entry *ne;
+					ne = create_entry(curr_nt, grammar);
+					ne->prods = NULL;
+				}
 				continue;
 			}
 			add_non_term(nt); /* add the nonterm to curr_prod */
 			break;
 		case TK_BACTK:	/* parse terminal */
 			next_token(&tk);
-			add_term(tk.type);
+			add_term(tk.type); /* add the term to curr_prod */
 			next_token(&tk);
 			if (tk.type != TK_BACTK)
 				panic("expected '`'");
@@ -224,10 +202,11 @@ void parse_bn()
 	skip_tks("<");
 	if (tk.type != TK_ID)
 		panic("expected starting nonterm");
-	curr_nt = strdup(tk.str_val);
+	start_sym = strdup(tk.str_val);
 	next_token(&tk);
 	skip_tks(">::=");
-	if (look_up(curr_nt) == NULL)
-		create_entry(curr_nt);
+	curr_nt = strdup(start_sym);
+	struct nt_entry *ne = create_entry(curr_nt, grammar);
+	ne->prods = NULL;
 	parse_prods();
 }
