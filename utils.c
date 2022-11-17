@@ -11,19 +11,21 @@ struct link {
 };
 
 /*
- * Adds lnk to the start of llist.
+ * Adds lnk to the start of llist and
+ * returns a pointer to lnk (which should
+ * be set as the new start of llist).
  * `next` should be the first member of lnk
  * and of every link on llist.
- * Returns NULL if either lnk or llist is NULL.
+ * Returns NULL if lnk is NULL.
+ * Usage: llist = new_link(lnk, llist);
  */
-void *add_link(void *lnk, void *llist)
+void *new_link(void *lnk, void *llist)
 {
-	if (lnk == NULL || llist == NULL)
+	if (lnk == NULL)
 		return NULL;
-	struct link *lk = lnk, *l = llist;
-	lk->next = l;
-	l = lk;
-	return l;
+	struct link *lk = lnk;
+	lk->next = llist;
+	return lk;
 }
 
 /*
