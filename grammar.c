@@ -5,11 +5,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/*
- * TODO: check for NULL returns from add_link, create_entry and strdup.
- * TODO: use add_link instead of manually adding links.
- * TODO: create a table of symbols in the grammar (to compute GOTO),
- * solve the problem of symbols being ints and strings.
+/* TODO:
+ * - Check for NULL returns from add_link, create_entry and strdup.
+ * - Use add_link instead of manually adding links.
+ * - Create a table of symbols in the grammar (to compute GOTO).
+ * 	Solve: symbols being ints and strings.
+ * - Symbol representation in print_prod. Solve: if terminal is
+ *   	of type TK_ID, the value is lost. (change term_val to term_type
+ *   	and add term_val to hold string value of terms in symbol_list?)
  */
 
 struct token tk;
