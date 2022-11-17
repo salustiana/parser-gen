@@ -1,6 +1,6 @@
 #include "grammar.h"
 #include "lexer.h"
-#include "linked_list.h"
+#include "utils.h"
 
 #include <stdlib.h>
 #include <stdio.h>
