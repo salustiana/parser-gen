@@ -5,11 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/* TODO:
- * - Check for NULL returns from new_link, create_entry, repr_sym and strdup.
- * - Use new_link instead of manually adding links.
- */
-
 struct token tk;
 char *curr_head;
 const char *start_sym;
@@ -49,7 +44,7 @@ char *repr_sym(struct symbol *sym)
 	if (sym->is_term) {
 		char *repr = malloc(MAX_TERMLEN);
 		if (repr == NULL)
-			return NULL;
+			panic("could not allocate memory to repr_sym");
 		if (sym->term_type == TK_ID)
 			snprintf(repr, MAX_TERMLEN, "`%s`", sym->term_name);
 		else
@@ -128,17 +123,16 @@ void skip_tks(const char *tk_str)
  */
 void add_prod()
 {
-	// TODO: use new_link()
 	if (curr_prod == NULL)
 		panic("trying to add curr_prod when it is NULL");
 	curr_prod = reverse_linked_list(curr_prod);
+
 	struct prod_list *new_prod = malloc(sizeof(struct prod_list));
 	if (new_prod == NULL)
 		panic("could not allocate memory for a new production");
 	new_prod->prod = curr_prod;
 	struct nt_entry *cnt = look_up(curr_head, grammar);
-	new_prod->next = cnt->prods;
-	cnt->prods = new_prod;
+	cnt->prods = new_link(new_prod, cnt->prods);
 	curr_prod = NULL;
 }
 

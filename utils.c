@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "lexer.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -16,13 +17,13 @@ struct link {
  * be set as the new start of llist).
  * `next` should be the first member of lnk
  * and of every link on llist.
- * Returns NULL if lnk is NULL.
+ * panics if lnk is NULL.
  * Usage: llist = new_link(lnk, llist);
  */
 void *new_link(void *lnk, void *llist)
 {
 	if (lnk == NULL)
-		return NULL;
+		panic("NULL lnk passed to new_link");
 	struct link *lk = lnk;
 	lk->next = llist;
 	return lk;
@@ -50,10 +51,10 @@ void *reverse_linked_list(void *llist)
 
 char *strdup(const char *s)
 {
-	char *t;
-	t = malloc((strlen(s) + 1) * sizeof(char));
-	if (t != NULL)
-		strcpy(t, s);
+	char *t = malloc((strlen(s) + 1) * sizeof(char));
+	if (t == NULL)
+		panic("could not allocate memory to duplicate string");
+	strcpy(t, s);
 	return t;
 }
 
@@ -98,7 +99,7 @@ void *look_up(const char *key, void *table)
 
 /*
  * Creates a new entry in table for key.
- * Returns NULL if the key already exists
+ * panics if the key already exists
  * or if no memory is available.
  * table should be an array of linked lists
  * of entries which have `next` for their
@@ -115,11 +116,11 @@ void *look_up(const char *key, void *table)
 void *create_entry(const char *key, void *table)
 {
 	if (look_up(key, table) != NULL)
-		return NULL;
+		panic("table already has an entry \"%s\"", key);
 
 	struct entry *ep = malloc(sizeof(struct entry));
 	if (ep == NULL || (ep->key = strdup(key)) == NULL)
-		return NULL;
+		panic("could not allocate memory to create new entry");
 
 	struct entry **tab = table;
 	unsigned int hash_val = hash(key);

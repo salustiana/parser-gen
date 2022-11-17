@@ -9,7 +9,7 @@ char *strdup(const char *s);
  * be set as the new start of llist).
  * `next` should be the first member of lnk
  * and of every link on llist.
- * Returns NULL if lnk is NULL.
+ * panics if lnk is NULL.
  * Usage: llist = new_link(lnk, llist);
  */
 void *new_link(void *lnk, void *llist);
@@ -45,7 +45,7 @@ void *look_up(const char *key, void *table);
 
 /*
  * Creates a new entry in table for key.
- * Returns NULL if the key already exists
+ * panics if the key already exists
  * or if no memory is available.
  * table should be an array of linked lists
  * of entries which have `next` for their
