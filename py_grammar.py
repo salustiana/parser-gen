@@ -160,7 +160,8 @@ def parse_prods():
                     create_entry(curr_nt, grammar)
                 continue
             curr_prod.append(nt) # add the nonterm to curr_prod
-            symbols.append(nt)
+            if nt not in symbols:
+                symbols.append(nt)
 
         elif tk.type == ord('`'): # parse a terminal
             next_token()
@@ -173,7 +174,8 @@ def parse_prods():
                     more_input = 0
                 continue
             curr_prod.append(tk.type)
-            symbols.append(tk.type)
+            if tk.type not in symbols:
+                symbols.append(tk.type)
             next_token()
             if tk.type != ord('`'):
                 expected("'`'")
@@ -488,6 +490,7 @@ if __name__ == "__main__":
     compute_follow_tab()
     for nt in grammar.keys():
         print_follow(nt)
+    print()
 
     compute_canon()
     print_canon()
