@@ -56,12 +56,23 @@ def match(tk):
     look = next_tk()
 
 def parse_expr(expr_str):
-    global tks, look
+    global tks, look, tk_i, stack, rax, rbx
 
     tks = tokenize_expr(expr_str)
     look = next_tk()
     expr()
-    return rax
+    retval = rax
+
+    # XXX: reset globals so
+    # parse_expr can be reused.
+    look = ''
+    tks = list()
+    tk_i = 0
+    stack = list()
+    rax = 0
+    rbx = 0
+
+    return retval
 
 def expr():
     term()
