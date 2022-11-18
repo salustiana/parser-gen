@@ -78,6 +78,7 @@ void print_prod(struct sym_list *prod)
 {
 	char *sym_repr;
 	for (struct sym_list *sp = prod; sp != NULL; sp = sp->next) {
+		assert(sp->sym != NULL);
 		sym_repr = repr_sym(sp->sym);
 		printf(sp->sym->is_term ? "%s " : "<%s> ", sym_repr);
 		free(sym_repr);
@@ -89,8 +90,7 @@ void print_prods(struct prod_list *prods)
 {
 	int first = 1;
 	for (struct prod_list *pp = prods; pp != NULL; pp = pp->next) {
-		if (pp->prod == NULL)
-			panic("trying to print NULL prod");
+		assert(pp->prod != NULL);
 		if (first)
 			first = 0;
 		else
@@ -106,8 +106,7 @@ void print_grammar()
 		if (grammar[i] == NULL)
 			continue;
 		for (struct nt_entry *ep = grammar[i]; ep != NULL; ep = ep->next) {
-			if (ep->prods == NULL)
-				panic("nonterminal <%s> has no productions", ep->key);
+			assert(ep->prods != NULL);
 			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
 		}
@@ -142,13 +141,11 @@ void skip_tks(const char *tk_str)
  */
 void add_prod()
 {
-	if (curr_prod == NULL)
-		panic("trying to add curr_prod when it is NULL");
+	assert(curr_prod != NULL);
 	curr_prod = reverse_linked_list(curr_prod);
 
 	struct prod_list *new_prod = malloc(sizeof(struct prod_list));
-	if (new_prod == NULL)
-		panic("could not allocate memory for a new production");
+	assert(new_prod != NULL);
 	new_prod->prod = curr_prod;
 	struct nt_entry *cnt = look_up(curr_head, grammar);
 	assert(cnt != NULL);
