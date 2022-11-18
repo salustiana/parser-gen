@@ -58,6 +58,20 @@ char *strdup(const char *s)
 	return t;
 }
 
+char *extended_str(const char *base, const char *ext)
+{
+	assert(base != NULL);
+	assert(ext != NULL);
+	char *s = malloc(strlen(base) + strlen(ext));
+	size_t i;
+	for (i = 0; base[i] != '\0'; i++)
+		s[i] = base[i];
+	for (size_t j = 0; ext[j] != '\0'; i++, j++)
+		s[i] = ext[j];
+	s[i] = '\0';
+	return s;
+}
+
 unsigned int hash(const char *s)
 {
 	unsigned int hash_val;

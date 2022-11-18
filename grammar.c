@@ -14,7 +14,7 @@
  */
 
 struct token tk;
-char *curr_head;
+const char *curr_head;
 const char *start_sym;
 
 struct symbol {
@@ -253,4 +253,22 @@ void parse_bn()
 	ne->prods = NULL;
 	curr_sym = malloc(sizeof(struct symbol));
 	parse_prods();
+}
+
+void augment_grammar()
+{
+	assert(start_sym != NULL);
+	assert(*start_sym != '\0');
+
+	curr_prod = NULL;
+	curr_head = extended_str(start_sym, "_s");
+	struct nt_entry *ne;
+	ne = create_entry(curr_head, grammar);
+	ne->prods = NULL;
+
+	assert(curr_sym != NULL);
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = strdup(start_sym);
+	add_sym();
+	add_prod();
 }

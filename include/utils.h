@@ -25,6 +25,8 @@ void *reverse_linked_list(void *llist);
 
 char *strdup(const char *s);
 
+char *extended_str(const char *base, const char *ext);
+
 /*
  * Returns a pointer to the entry for
  * key in table, or NULL if table does

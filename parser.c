@@ -1,8 +1,8 @@
 #include "grammar.h"
-#include "lexer.h"
 
 void parse()
 {
 	parse_bn();
+	augment_grammar();
 	print_grammar();
 }
