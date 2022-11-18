@@ -64,9 +64,7 @@ void test_add_prod()
 	for (int i = 0; i < HASHSIZE; i++)
 		grammar[i] = NULL;
 
-	curr_prod = malloc(sizeof(struct sym_list));
-	curr_prod->next = NULL;
-	curr_prod->sym = NULL;
+	curr_prod = NULL;
 
 	curr_head = "head";
 	assert(look_up(curr_head, grammar) == NULL);
@@ -114,8 +112,7 @@ void test_add_prod()
 	pp = pp->next;
 	assert(pp != NULL);
 	assert(pp->next == NULL);
-	// FIXME, XXX: why next?
-	sp = pp->prod->next;
+	sp = pp->prod;
 	assert(sp != NULL);
 
 	assert(sp->sym->is_term == 0);

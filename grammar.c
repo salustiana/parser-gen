@@ -198,6 +198,7 @@ void parse_prods()
 				skip_tks("::=");
 				add_prod();
 				/* start prod for new def */
+				assert(curr_prod == NULL);
 				curr_head = strdup(curr_sym->nt_name);
 				if (look_up(curr_head, grammar) == NULL) {
 					struct nt_entry *ne;
