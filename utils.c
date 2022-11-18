@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* TODO:
+ * - Find a way to make these functions safer. It would be
+ *   better not to silently convert from (void *) this much.
+ */
+
 struct link {
 	struct link *next;
 };

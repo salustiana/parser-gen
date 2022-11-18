@@ -7,7 +7,10 @@
 #include <stdio.h>
 
 /* TODO:
- * - Check for NULL returns from new_link, create_entry, repr_sym and strdup.
+ * - Either exhaust the cases in the repr_sym switch,
+ *	or find a way to handle multichar operators (maybe
+ *	rename `symbols` to `nonterms` and add a
+ *	`terms[last tk_type]` array to store terms directly).
  */
 
 struct token tk;
@@ -46,17 +49,29 @@ struct nt_entry {
 #define MAX_TERMLEN	8
 char *repr_sym(struct symbol *sym)
 {
-	if (sym->is_term) {
-		char *repr = malloc(MAX_TERMLEN);
+	char *repr;
+	if (!sym->is_term) {
+		repr = strdup(sym->nt_name);
 		assert(repr != NULL);
-		if (sym->term_type == TK_ID)
-			snprintf(repr, MAX_TERMLEN, "`%s`", sym->term_name);
-		else
-			snprintf(repr, MAX_TERMLEN, "`%c`", sym->term_type);
 		return repr;
 	}
-	else
-		return strdup(sym->nt_name);
+
+	if (sym->term_type == EMPTY_STR) {
+		repr = strdup("``");
+		assert(repr != NULL);
+		return repr;
+	}
+
+	repr = malloc(MAX_TERMLEN);
+	assert(repr != NULL);
+	switch (sym->term_type) {
+		case TK_ID:
+			snprintf(repr, MAX_TERMLEN, "`%s`", sym->term_name);
+			break;
+		default:
+			snprintf(repr, MAX_TERMLEN, "`%c`", sym->term_type);
+	}
+	return repr;
 }
 
 void print_prod(struct sym_list *prod)
@@ -136,6 +151,7 @@ void add_prod()
 		panic("could not allocate memory for a new production");
 	new_prod->prod = curr_prod;
 	struct nt_entry *cnt = look_up(curr_head, grammar);
+	assert(cnt != NULL);
 	cnt->prods = new_link(new_prod, cnt->prods);
 	curr_prod = NULL;
 }
@@ -199,6 +215,13 @@ void parse_prods()
 		case TK_BACTK:	/* parse terminal */
 			next_token(&tk);
 			curr_sym->is_term = 1;
+			if (tk.type == TK_BACTK) { /* parse empty string */
+				curr_sym->term_type = EMPTY_STR;
+				add_sym();
+				/* BN could end here */
+				more_input = next_token(&tk);
+				continue;
+			}
 			curr_sym->term_type = tk.type;
 			if (curr_sym->term_type == TK_ID)
 				curr_sym->term_name = strdup(tk.str_val);

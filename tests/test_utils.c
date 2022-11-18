@@ -24,7 +24,6 @@ void test_new_link()
 		assert(p->cval == s[i]);
 		--i;
 	}
-	printf("\ttest_new_link() passed\n");
 }
 
 void test_reverse_linked_list()
@@ -44,7 +43,6 @@ void test_reverse_linked_list()
 		assert(p->cval == s[i]);
 		++i;
 	}
-	printf("\ttest_reverse_linked_list() passed\n");
 }
 
 struct _entry {
@@ -68,7 +66,6 @@ void test_look_up()
 	_tab[hash_val] = ep;
 	assert(look_up("key", _tab) != NULL);
 	assert(((struct _entry *) look_up("key", _tab))->ival == 8);
-	printf("\ttest_look_up() passed\n");
 }
 
 void test_create_entry()
@@ -79,15 +76,19 @@ void test_create_entry()
 	assert(look_up("key", _tab) == NULL);
 	create_entry("key", _tab);
 	assert(look_up("key", _tab) != NULL);
-	printf("\ttest_create_entry() passed\n");
 }
 
 void test_utils()
 {
-	printf("test_utils() start\n");
 	test_new_link();
+	printf("test_new_link() passed\n");
+
 	test_reverse_linked_list();
+	printf("test_reverse_linked_list() passed\n");
+
 	test_look_up();
+	printf("test_look_up() passed\n");
+
 	test_create_entry();
-	printf("test_utils() passed\n");
+	printf("test_create_entry() passed\n");
 }

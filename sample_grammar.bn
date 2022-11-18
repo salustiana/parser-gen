@@ -1,3 +1,10 @@
+<stmt> ::= `id` `=` <expr>`;`
+	| `loop` `(`<optexpr>`;` <optexpr>`;` <optexpr>`)` <stmt>
+	| `{` <stmts> `}`
+
+<stmtlist> ::= <stmtlist> <stmt>
+	| ``
+
 <expr> ::= <expr> `+` <term>
 	| <term>
 
