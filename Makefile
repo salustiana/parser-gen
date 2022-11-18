@@ -6,3 +6,6 @@ INCLUDES = -iquote ./include -iquote ../lexer/include
 
 a.out: ${OBJS}
 	${CC} ${OBJS} ${INCLUDES} ${CFLAGS} #${LIBS}
+
+test.out: ${OBJS} ./tests
+	${CC} ./tests/test_main.c ${INCLUDES} ${CFLAGS} -o test.out

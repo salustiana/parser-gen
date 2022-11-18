@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* TODO: add tests for these utils. */
-
 struct link {
 	struct link *next;
 };
@@ -77,7 +75,7 @@ struct entry {
  * first member and `key` for their second
  * member:
  * struct entry {
- * 	void *next;
+ * 	struct entry *next;
  * 	const char *key;
  * 	...
  * };)
@@ -115,8 +113,10 @@ void *create_entry(const char *key, void *table)
 	assert(look_up(key, table) == NULL);
 
 	struct entry *ep = malloc(sizeof(struct entry));
-	if (ep == NULL || (ep->key = strdup(key)) == NULL)
-		return NULL;
+	assert(ep != NULL);
+
+	ep->key = strdup(key);
+	assert(ep->key != NULL);
 
 	struct entry **tab = table;
 	unsigned int hash_val = hash(key);

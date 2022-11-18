@@ -34,7 +34,7 @@ char *strdup(const char *s);
  * first member and `key` for their second
  * member:
  * struct entry {
- * 	void *next;
+ * 	struct entry *next;
  * 	const char *key;
  * 	...
  * };)
