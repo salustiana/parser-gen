@@ -2,6 +2,7 @@
 #include "lexer.h"
 #include "utils.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -47,8 +48,7 @@ char *repr_sym(struct symbol *sym)
 {
 	if (sym->is_term) {
 		char *repr = malloc(MAX_TERMLEN);
-		if (repr == NULL)
-			return NULL;
+		assert(repr != NULL);
 		if (sym->term_type == TK_ID)
 			snprintf(repr, MAX_TERMLEN, "`%s`", sym->term_name);
 		else

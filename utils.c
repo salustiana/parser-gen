@@ -1,5 +1,6 @@
 #include "utils.h"
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,13 +17,11 @@ struct link {
  * be set as the new start of llist).
  * `next` should be the first member of lnk
  * and of every link on llist.
- * Returns NULL if lnk is NULL.
  * Usage: llist = new_link(lnk, llist);
  */
 void *new_link(void *lnk, void *llist)
 {
-	if (lnk == NULL)
-		return NULL;
+	assert(lnk != NULL);
 	struct link *lk = lnk;
 	lk->next = llist;
 	return lk;
@@ -50,10 +49,9 @@ void *reverse_linked_list(void *llist)
 
 char *strdup(const char *s)
 {
-	char *t;
-	t = malloc((strlen(s) + 1) * sizeof(char));
-	if (t != NULL)
-		strcpy(t, s);
+	char *t = malloc((strlen(s) + 1) * sizeof(char));
+	assert(t != NULL);
+	strcpy(t, s);
 	return t;
 }
 
@@ -98,8 +96,8 @@ void *look_up(const char *key, void *table)
 
 /*
  * Creates a new entry in table for key.
- * Returns NULL if the key already exists
- * or if no memory is available.
+ * The table must not have an existing
+ * entry for the given key.
  * table should be an array of linked lists
  * of entries which have `next` for their
  * first member and `key` for their second
@@ -114,8 +112,7 @@ void *look_up(const char *key, void *table)
  */
 void *create_entry(const char *key, void *table)
 {
-	if (look_up(key, table) != NULL)
-		return NULL;
+	assert(look_up(key, table) == NULL);
 
 	struct entry *ep = malloc(sizeof(struct entry));
 	if (ep == NULL || (ep->key = strdup(key)) == NULL)

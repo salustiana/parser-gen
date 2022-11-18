@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-char *strdup(const char *s);
+#define HASHSIZE	101
 
 /*
  * Adds lnk to the start of llist and
@@ -9,7 +9,6 @@ char *strdup(const char *s);
  * be set as the new start of llist).
  * `next` should be the first member of lnk
  * and of every link on llist.
- * Returns NULL if lnk is NULL.
  * Usage: llist = new_link(lnk, llist);
  */
 void *new_link(void *lnk, void *llist);
@@ -18,12 +17,13 @@ void *new_link(void *lnk, void *llist);
  * Reverses the NULL terminated llist
  * and returns a pointer to its new
  * first element.
- * llist should point to the next pointer,
- * in other words, *llist == llist->next
+ * `next` should be the first member
+ * of the links in llist.
+ * In other words, *llist == llist->next.
  */
 void *reverse_linked_list(void *llist);
 
-#define HASHSIZE	101
+char *strdup(const char *s);
 
 /*
  * Returns a pointer to the entry for
@@ -45,8 +45,8 @@ void *look_up(const char *key, void *table);
 
 /*
  * Creates a new entry in table for key.
- * Returns NULL if the key already exists
- * or if no memory is available.
+ * The table must not have an existing
+ * entry for the given key.
  * table should be an array of linked lists
  * of entries which have `next` for their
  * first member and `key` for their second
