@@ -62,14 +62,14 @@ void test_add_sym()
 void test_add_prod()
 {
 	for (int i = 0; i < HASHSIZE; i++)
-		grammar[i] = NULL;
+		productions[i] = NULL;
 
 	curr_prod = NULL;
 
 	curr_head = "head";
-	assert(look_up(curr_head, grammar) == NULL);
-	create_entry(curr_head, grammar);
-	assert(look_up(curr_head, grammar) != NULL);
+	assert(look_up(curr_head, productions) == NULL);
+	create_entry(curr_head, productions);
+	assert(look_up(curr_head, productions) != NULL);
 
 	curr_sym = malloc(sizeof(struct symbol));
 
@@ -93,7 +93,7 @@ void test_add_prod()
 
 	add_prod();
 
-	struct nt_entry *ep = look_up(curr_head, grammar);
+	struct prod_head_entry *ep = look_up(curr_head, productions);
 	assert(ep != NULL);
 
 	struct prod_list *pp;

@@ -40,11 +40,11 @@ struct prod_list {
 	struct sym_list *prod;
 };
 
-struct nt_entry {
-	struct nt_entry *next;
+struct prod_head_entry {
+	struct prod_head_entry *next;
 	const char *key;
 	struct prod_list *prods;
-} *grammar[HASHSIZE];
+} *productions[HASHSIZE];
 
 #define MAX_TERMLEN	8
 char *repr_sym(struct symbol *sym)
@@ -103,9 +103,9 @@ void print_prods(struct prod_list *prods)
 void print_grammar()
 {
 	for (int i = 0; i < HASHSIZE; i++) {
-		if (grammar[i] == NULL)
+		if (productions[i] == NULL)
 			continue;
-		for (struct nt_entry *ep = grammar[i]; ep != NULL; ep = ep->next) {
+		for (struct prod_head_entry *ep = productions[i]; ep != NULL; ep = ep->next) {
 			assert(ep->prods != NULL);
 			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
@@ -147,7 +147,7 @@ void add_prod()
 	struct prod_list *new_prod = malloc(sizeof(struct prod_list));
 	assert(new_prod != NULL);
 	new_prod->prod = curr_prod;
-	struct nt_entry *cnt = look_up(curr_head, grammar);
+	struct prod_head_entry *cnt = look_up(curr_head, productions);
 	assert(cnt != NULL);
 	cnt->prods = new_link(new_prod, cnt->prods);
 	curr_prod = NULL;
@@ -200,9 +200,9 @@ void parse_prods()
 				/* start prod for new def */
 				assert(curr_prod == NULL);
 				curr_head = strdup(curr_sym->nt_name);
-				if (look_up(curr_head, grammar) == NULL) {
-					struct nt_entry *ne;
-					ne = create_entry(curr_head, grammar);
+				if (look_up(curr_head, productions) == NULL) {
+					struct prod_head_entry *ne;
+					ne = create_entry(curr_head, productions);
 					ne->prods = NULL;
 				}
 				continue;
@@ -249,7 +249,7 @@ void parse_bn()
 	next_token(&tk);
 	skip_tks(">::=");
 	curr_head = strdup(start_sym);
-	struct nt_entry *ne = create_entry(curr_head, grammar);
+	struct prod_head_entry *ne = create_entry(curr_head, productions);
 	ne->prods = NULL;
 	curr_sym = malloc(sizeof(struct symbol));
 	parse_prods();
@@ -262,8 +262,8 @@ void augment_grammar()
 
 	curr_prod = NULL;
 	curr_head = extended_str(start_sym, "_s");
-	struct nt_entry *ne;
-	ne = create_entry(curr_head, grammar);
+	struct prod_head_entry *ne;
+	ne = create_entry(curr_head, productions);
 	ne->prods = NULL;
 
 	assert(curr_sym != NULL);
