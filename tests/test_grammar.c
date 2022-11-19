@@ -24,8 +24,8 @@ void test_repr_sym()
 
 void test_add_sym()
 {
-	for (int i = 0; i < HASHSIZE; i++)
-		symbols[i] = NULL;
+	for (size_t i = 0; i < TK_TYPE_COUNT; i++)
+		term_in_grammar[i] = 0;
 	curr_prod = malloc(sizeof(struct sym_list));
 	curr_prod->next = NULL;
 	curr_prod->sym = NULL;
@@ -34,22 +34,17 @@ void test_add_sym()
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nt1";
-	assert(look_up(repr_sym(curr_sym), symbols) == NULL);
 	add_sym();
 
 	curr_sym->is_term = 1;
 	curr_sym->term_type = TK_LSHFT;
-	assert(look_up(repr_sym(curr_sym), symbols) == NULL);
+	assert(!term_in_grammar[TK_LSHFT]);
 	add_sym();
+	assert(term_in_grammar[TK_LSHFT]);
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nt2";
-	assert(look_up(repr_sym(curr_sym), symbols) == NULL);
 	add_sym();
-
-	assert(look_up("nt2", symbols) != NULL);
-	// TODO: assert(look_up("`<<`", symbols) != NULL);
-	assert(look_up("nt1", symbols) != NULL);
 
 	struct sym_list *sp = curr_prod;
 	assert(strcmp(sp->sym->nt_name, "nt2") == 0);

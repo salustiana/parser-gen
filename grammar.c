@@ -6,13 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/* TODO:
- * - Either exhaust the cases in the repr_sym switch,
- *	or find a way to handle multichar operators (maybe
- *	rename `symbols` to `nonterms` and add a
- *	`terms[last tk_type]` array to store terms directly).
- */
-
 struct token tk;
 const char *curr_head;
 const char *start_sym;
@@ -23,12 +16,6 @@ struct symbol {
 	const char *term_name;
 	const char *nt_name;
 } *curr_sym;
-
-struct sym_entry {
-	struct sym_entry *next;
-	const char *key;
-	struct symbol *sym;
-} *symbols[HASHSIZE];
 
 struct sym_list {
 	struct sym_list *next;
@@ -45,6 +32,8 @@ struct prod_head_entry {
 	const char *key;
 	struct prod_list *prods;
 } *productions[HASHSIZE];
+
+enum tk_type term_in_grammar[TK_TYPE_COUNT];
 
 #define MAX_TERMLEN	8
 char *repr_sym(struct symbol *sym)
@@ -154,9 +143,11 @@ void add_prod()
 }
 
 /*
- * Adds curr_sym to the curr_prod and to the
- * symbols table (if not already there), then
- * sets curr_sym to newly allocated memory.
+ * Adds curr_sym to the curr_prod.
+ * If curr_sym was a terminal, it sets
+ * term_in_grammar[curr_sym.term_type] = 1.
+ * Finally, it sets curr_sym to newly
+ * allocated memory.
  * XXX: the symbol is added as the first
  * element of the linked list, so curr_prod
  * is stored in reverse.
@@ -167,12 +158,10 @@ void add_sym()
 	struct sym_list *new_sym = malloc(sizeof(struct sym_list));
 	new_sym->sym = curr_sym;
 	curr_prod = new_link(new_sym, curr_prod);
-	/* add to symbols */
-	const char *sym_key = repr_sym(curr_sym);
-	if (look_up(sym_key, symbols) == NULL) {
-		struct sym_entry *ep = create_entry(sym_key, symbols);
-		ep->sym = curr_sym;
-	}
+
+	if (curr_sym->is_term)
+		term_in_grammar[curr_sym->term_type] = 1;
+
 	curr_sym = malloc(sizeof(struct symbol));
 }
 
