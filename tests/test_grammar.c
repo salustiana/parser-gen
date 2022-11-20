@@ -14,8 +14,7 @@ void test_repr_sym()
 
 	_sym->is_term = 1;
 	_sym->term_type = TK_ID;
-	_sym->term_name = "term";
-	assert(strcmp(repr_sym(_sym), "`term`") == 0);
+	assert(strcmp(repr_sym(_sym), "`TK_ID`") == 0);
 
 	_sym->is_term = 0;
 	_sym->nt_name = "nonterm";

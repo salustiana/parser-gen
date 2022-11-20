@@ -13,7 +13,6 @@ const char *start_sym;
 struct symbol {
 	int is_term;
 	enum tk_type term_type;
-	const char *term_name;
 	const char *nt_name;
 } *curr_sym;
 
@@ -56,7 +55,7 @@ char *repr_sym(struct symbol *sym)
 	switch (sym->term_type) {
 		/* TODO: handle missing cases */
 		case TK_ID:
-			snprintf(repr, MAX_TERMLEN, "`%s`", sym->term_name);
+			snprintf(repr, MAX_TERMLEN, "`TK_ID`");
 			break;
 		default:
 			snprintf(repr, MAX_TERMLEN, "`%c`", sym->term_type);
@@ -211,8 +210,6 @@ void parse_prods()
 			break;
 		}
 		curr_sym->term_type = tk.type;
-		if (curr_sym->term_type == TK_ID)
-			curr_sym->term_name = strdup(tk.str_val);
 		add_sym(); /* add the term to curr_prod */
 		next_token(&tk);
 		if (tk.type != TK_BACTK)
