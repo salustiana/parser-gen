@@ -33,7 +33,7 @@ struct prod_head_entry {
 	struct prod_list *prods;
 } *productions[HASHSIZE];
 
-enum tk_type term_in_grammar[TK_TYPE_COUNT];
+int term_in_grammar[TK_TYPE_COUNT];
 
 #define MAX_TERMLEN	8
 char *repr_sym(struct symbol *sym)
