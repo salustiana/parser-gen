@@ -54,6 +54,7 @@ char *repr_sym(struct symbol *sym)
 	repr = malloc(MAX_TERMLEN);
 	assert(repr != NULL);
 	switch (sym->term_type) {
+		/* TODO: handle missing cases */
 		case TK_ID:
 			snprintf(repr, MAX_TERMLEN, "`%s`", sym->term_name);
 			break;
@@ -173,7 +174,7 @@ void parse_prods()
 		case TK_BAR:	/* new prod for current nonterm */
 			add_prod();
 			next_token(&tk);
-			continue;
+			break;
 		case TK_LESS:	/* parse nonterm */
 			next_token(&tk);
 			if (tk.type != TK_ID)
@@ -194,7 +195,7 @@ void parse_prods()
 					ne = create_entry(curr_head, productions);
 					ne->prods = NULL;
 				}
-				continue;
+				break;
 			}
 			curr_sym->is_term = 0;
 			add_sym(); /* add the nonterm to curr_prod */
@@ -207,7 +208,7 @@ void parse_prods()
 				add_sym();
 				/* BN could end here */
 				more_input = next_token(&tk);
-				continue;
+				break;
 			}
 			curr_sym->term_type = tk.type;
 			if (curr_sym->term_type == TK_ID)
