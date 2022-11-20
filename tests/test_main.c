@@ -7,13 +7,11 @@
 
 int main()
 {
-	printf(ASCII_BOLD"TEST_UTILS\n"ASCII_NORMAL ASCII_GREEN);
+	printf(ASCII_BOLD"TEST_UTILS\n"ASCII_NORMAL);
 	test_utils();
+	printf(ASCII_BOLD ASCII_GREEN"passed\n\n"ASCII_NORMAL);
 
-	printf(ASCII_NORMAL "\n");
-
-	printf(ASCII_BOLD"TEST_GRAMMAR\n"ASCII_NORMAL ASCII_GREEN);
+	printf(ASCII_BOLD"TEST_GRAMMAR\n"ASCII_NORMAL);
 	test_grammar();
-
-	printf(ASCII_NORMAL);
+	printf(ASCII_BOLD ASCII_GREEN"passed\n\n"ASCII_NORMAL);
 }

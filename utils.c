@@ -74,6 +74,7 @@ char *extended_str(const char *base, const char *ext)
 
 unsigned int hash(const char *s)
 {
+	assert(s != NULL);
 	unsigned int hash_val;
 	for (hash_val = 0; *s != '\0'; s++)
 		hash_val = (unsigned int) *s + 31*hash_val;
