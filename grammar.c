@@ -95,7 +95,8 @@ void print_grammar()
 	for (int i = 0; i < HASHSIZE; i++) {
 		if (productions[i] == NULL)
 			continue;
-		for (struct prod_head_entry *ep = productions[i]; ep != NULL; ep = ep->next) {
+		for (struct prod_head_entry *ep = productions[i];
+				ep != NULL; ep = ep->next) {
 			assert(ep->prods != NULL);
 			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
@@ -192,7 +193,8 @@ void parse_prods()
 				curr_head = strdup(curr_sym->nt_name);
 				if (look_up(curr_head, productions) == NULL) {
 					struct prod_head_entry *ne;
-					ne = create_entry(curr_head, productions);
+					ne = create_entry(curr_head,
+							productions);
 					ne->prods = NULL;
 				}
 				break;
