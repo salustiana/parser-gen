@@ -95,8 +95,7 @@ void print_grammar()
 	for (int i = 0; i < HASHSIZE; i++) {
 		if (productions[i] == NULL)
 			continue;
-		for (struct prod_head_entry *ep = productions[i];
-				ep != NULL; ep = ep->next) {
+		for (struct prod_head_entry *ep = productions[i]; ep != NULL; ep = ep->next) {
 			assert(ep->prods != NULL);
 			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
@@ -171,63 +170,62 @@ void parse_prods()
 {
 	int more_input = 1;
 	while (more_input) {
-		switch (tk.type) {
-		case TK_BAR:	/* new prod for current nonterm */
+	switch (tk.type) {
+	case TK_BAR:	/* new prod for current nonterm */
+		add_prod();
+		next_token(&tk);
+		break;
+	case TK_LESS:	/* parse nonterm */
+		next_token(&tk);
+		if (tk.type != TK_ID)
+			panic("expected nonterm");
+		curr_sym->nt_name = strdup(tk.str_val);
+		next_token(&tk);
+		if (tk.type != TK_GRT)
+			panic("expected '>'");
+		more_input = next_token(&tk); /* BN could end here */
+		if (tk.type == TK_COLN) { /* we are in a new def */
+			skip_tks("::=");
 			add_prod();
-			next_token(&tk);
-			break;
-		case TK_LESS:	/* parse nonterm */
-			next_token(&tk);
-			if (tk.type != TK_ID)
-				panic("expected nonterm");
-			curr_sym->nt_name = strdup(tk.str_val);
-			next_token(&tk);
-			if (tk.type != TK_GRT)
-				panic("expected '>'");
-			more_input = next_token(&tk); /* BN could end here */
-			if (tk.type == TK_COLN) { /* we are in a new def */
-				skip_tks("::=");
-				add_prod();
-				/* start prod for new def */
-				assert(curr_prod == NULL);
-				curr_head = strdup(curr_sym->nt_name);
-				if (look_up(curr_head, productions) == NULL) {
-					struct prod_head_entry *ne;
-					ne = create_entry(curr_head,
-							productions);
-					ne->prods = NULL;
-				}
-				break;
+			/* start prod for new def */
+			assert(curr_prod == NULL);
+			curr_head = strdup(curr_sym->nt_name);
+			if (look_up(curr_head, productions) == NULL) {
+				struct prod_head_entry *ne;
+				ne = create_entry(curr_head, productions);
+				ne->prods = NULL;
 			}
-			curr_sym->is_term = 0;
-			add_sym(); /* add the nonterm to curr_prod */
 			break;
-		case TK_BACTK:	/* parse terminal */
-			next_token(&tk);
-			curr_sym->is_term = 1;
-			if (tk.type == TK_BACTK) { /* parse empty string */
-				curr_sym->term_type = EMPTY_STR;
-				add_sym();
-				/* BN could end here */
-				more_input = next_token(&tk);
-				break;
-			}
-			curr_sym->term_type = tk.type;
-			if (curr_sym->term_type == TK_ID)
-				curr_sym->term_name = strdup(tk.str_val);
-			add_sym(); /* add the term to curr_prod */
-			next_token(&tk);
-			if (tk.type != TK_BACTK)
-				panic("expected '`'");
-			more_input = next_token(&tk); /* BN could end here */
-			break;
-		default:
-			// TODO: produce a proper error message
-			print_token(tk);
-			panic("token %d not supported by BN syntax", tk.type);
 		}
-		if (!more_input)
-			add_prod();
+		curr_sym->is_term = 0;
+		add_sym(); /* add the nonterm to curr_prod */
+		break;
+	case TK_BACTK:	/* parse terminal */
+		next_token(&tk);
+		curr_sym->is_term = 1;
+		if (tk.type == TK_BACTK) { /* parse empty string */
+			curr_sym->term_type = EMPTY_STR;
+			add_sym();
+			/* BN could end here */
+			more_input = next_token(&tk);
+			break;
+		}
+		curr_sym->term_type = tk.type;
+		if (curr_sym->term_type == TK_ID)
+			curr_sym->term_name = strdup(tk.str_val);
+		add_sym(); /* add the term to curr_prod */
+		next_token(&tk);
+		if (tk.type != TK_BACTK)
+			panic("expected '`'");
+		more_input = next_token(&tk); /* BN could end here */
+		break;
+	default:
+		// TODO: produce a proper error message
+		print_token(tk);
+		panic("token %d not supported by BN syntax", tk.type);
+	}
+	if (!more_input)
+		add_prod();
 	}
 }
 
