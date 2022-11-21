@@ -70,13 +70,10 @@ void test_repr_sym()
 
 void test_add_sym()
 {
-	for (size_t i = 0; i < TK_TYPE_COUNT; i++)
-		term_in_grammar[i] = 0;
+	init_grammar();
 	curr_prod = malloc(sizeof(struct sym_list));
 	curr_prod->next = NULL;
 	curr_prod->sym = NULL;
-
-	curr_sym = malloc(sizeof(struct symbol));
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nt1";
@@ -104,17 +101,12 @@ void test_add_sym()
 
 void test_add_prod()
 {
-	for (int i = 0; i < HASHSIZE; i++)
-		productions[i] = NULL;
-
-	curr_prod = NULL;
+	init_grammar();
 
 	curr_head = "head";
 	assert(look_up(curr_head, productions) == NULL);
 	create_entry(curr_head, productions);
 	assert(look_up(curr_head, productions) != NULL);
-
-	curr_sym = malloc(sizeof(struct symbol));
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
@@ -173,17 +165,10 @@ void test_add_prod()
 
 void test_fill_first_of_term_tab()
 {
-	for (int i = 0; i < HASHSIZE; i++)
-		productions[i] = NULL;
-	for (size_t i = 0; i < TK_TYPE_COUNT; i++)
-		term_in_grammar[i] = 0;
-
-	curr_prod = NULL;
+	init_grammar();
 
 	curr_head = "head";
 	create_entry(curr_head, productions);
-
-	curr_sym = malloc(sizeof(struct symbol));
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
@@ -226,17 +211,10 @@ void test_fill_first_of_term_tab()
 
 void test_first_for_terms()
 {
-	for (int i = 0; i < HASHSIZE; i++)
-		productions[i] = NULL;
-	for (size_t i = 0; i < TK_TYPE_COUNT; i++)
-		term_in_grammar[i] = 0;
-
-	curr_prod = NULL;
+	init_grammar();
 
 	curr_head = "head";
 	create_entry(curr_head, productions);
-
-	curr_sym = malloc(sizeof(struct symbol));
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
@@ -289,15 +267,10 @@ void test_first_for_terms()
 
 void test_fill_nts_in_grammar_list()
 {
-	for (int i = 0; i < HASHSIZE; i++)
-		productions[i] = NULL;
-
-	curr_prod = NULL;
+	init_grammar();
 
 	curr_head = "head";
 	create_entry(curr_head, productions);
-
-	curr_sym = malloc(sizeof(struct symbol));
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
