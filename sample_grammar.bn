@@ -1,6 +1,6 @@
 <stmt> ::= `id` `=` <expr>`;`
 	| `loop` `(`<optexpr>`;` <optexpr>`;` <optexpr>`)` <stmt>
-	| `{` <stmts> `}`
+	| `{` <stmtlist> `}`
 
 <stmtlist> ::= <stmtlist> <stmt>
 	| ``
