@@ -108,7 +108,8 @@ void print_grammar()
 	for (size_t i = 0; i < HASHSIZE; i++) {
 		if (productions[i] == NULL)
 			continue;
-		for (struct prod_head_entry *ep = productions[i]; ep != NULL; ep = ep->next) {
+		struct prod_head_entry *ep = productions[i];
+		for (; ep != NULL; ep = ep->next) {
 			assert(ep->prods != NULL);
 			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
