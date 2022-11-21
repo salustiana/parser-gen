@@ -19,6 +19,8 @@ void test_repr_sym()
 	_sym->is_term = 0;
 	_sym->nt_name = "nonterm";
 	assert(strcmp(repr_sym(_sym), "nonterm") == 0);
+
+	printf("%s passed\n", __func__);
 }
 
 void test_add_sym()
@@ -51,6 +53,8 @@ void test_add_sym()
 	assert(sp->sym->term_type == TK_LSHFT);
 	sp = sp->next;
 	assert(strcmp(sp->sym->nt_name, "nt1") == 0);
+
+	printf("%s passed\n", __func__);
 }
 
 void test_add_prod()
@@ -118,14 +122,67 @@ void test_add_prod()
 	assert(sp->sym->is_term == 1);
 	assert(sp->sym->term_type == TK_STR);
 	assert(sp->next == NULL);
+
+	printf("%s passed\n", __func__);
+}
+
+void test_fill_first_of_term_tab()
+{
+	for (int i = 0; i < HASHSIZE; i++)
+		productions[i] = NULL;
+	for (size_t i = 0; i < TK_TYPE_COUNT; i++)
+		term_in_grammar[i] = 0;
+
+	curr_prod = NULL;
+
+	curr_head = "head";
+	create_entry(curr_head, productions);
+
+	curr_sym = malloc(sizeof(struct symbol));
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nonterm";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_CMPL;
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_STR;
+	add_sym();
+
+	add_prod();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = EMPTY_STR;
+	add_sym();
+
+	add_prod();
+
+	fill_first_of_term_tab();
+
+	for (size_t i = 0; i < TK_TYPE_COUNT; i++) {
+		switch (i) {
+			case TK_CMPL: case TK_STR: case EMPTY_STR:
+				assert(first_of_term[i] != NULL);
+				assert(first_of_term[i]->next == NULL);
+				assert(first_of_term[i]->sym != NULL);
+				assert(first_of_term[i]->sym->is_term);
+				assert(first_of_term[i]->sym->term_type == i);
+				break;
+			default:
+				assert(first_of_term[i] == NULL);
+		}
+	}
+
+	printf("%s passed\n", __func__);
 }
 
 void test_grammar()
 {
 	test_repr_sym();
-	printf("test_repr_sym() passed\n");
 	test_add_sym();
-	printf("test_add_sym() passed\n");
 	test_add_prod();
-	printf("test_add_prod() passed\n");
+	test_fill_first_of_term_tab();
 }

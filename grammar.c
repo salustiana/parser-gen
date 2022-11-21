@@ -19,7 +19,7 @@ struct symbol {
 struct sym_list {
 	struct sym_list *next;
 	struct symbol *sym;
-} *curr_prod;
+} *curr_prod, *first_of_term[TK_TYPE_COUNT];
 
 struct prod_list {
 	struct prod_list *next;
@@ -259,3 +259,26 @@ void augment_grammar()
 	add_sym();
 	add_prod();
 }
+
+void fill_first_of_term_tab()
+{
+	for (size_t i = 0; i < TK_TYPE_COUNT; i++) {
+		if (!term_in_grammar[i]) {
+			first_of_term[i] = NULL;
+			continue;
+		}
+		struct symbol *t = malloc(sizeof(struct symbol));
+		t->is_term = 1;
+		t->term_type = (enum tk_type) i;
+		struct sym_list *sl = malloc(sizeof(struct sym_list));
+		sl->next = NULL;
+		sl->sym = t;
+		first_of_term[i] = sl;
+	}
+}
+
+/* TODO
+struct sym_list *first(struct symbol *sym)
+{
+}
+*/
