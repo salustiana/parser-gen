@@ -28,7 +28,7 @@ int term_in_grammar[TK_TYPE_COUNT];
 void init_grammar()
 {
 	curr_head = start_sym = NULL;
-	curr_sym = NULL;
+	curr_sym = malloc(sizeof(struct symbol));
 	es_sym = (struct symbol) {1, EMPTY_STR, NULL};
 	curr_prod = nts_in_grammar = NULL;
 	for (size_t i = 0; i < TK_TYPE_COUNT; i++) {
@@ -428,7 +428,6 @@ void parse_bn()
 	curr_head = strdup(start_sym);
 	struct prod_head_entry *ne = create_entry(curr_head, productions);
 	ne->prods = NULL;
-	curr_sym = malloc(sizeof(struct symbol));
 	parse_prods();
 	augment_grammar();
 	compute_first_tab();
