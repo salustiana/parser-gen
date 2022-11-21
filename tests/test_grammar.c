@@ -5,6 +5,51 @@
 
 struct symbol *_sym;
 
+void test_sym_in_sym_list()
+{
+	struct symbol *s;
+	struct sym_list *sl;
+	struct sym_list *list = NULL;
+
+	s = malloc(sizeof(struct symbol));
+	s->is_term = 1;
+	s->term_type = TK_INT;
+	sl = malloc(sizeof(struct sym_list));
+	sl->sym = s;
+	assert(!sym_in_sym_list(s, list));
+	list = new_link(sl, list);
+	assert(sym_in_sym_list(s, list));
+
+	s = malloc(sizeof(struct symbol));
+	s->is_term = 1;
+	s->term_type = TK_GRT;
+	sl = malloc(sizeof(struct sym_list));
+	sl->sym = s;
+	assert(!sym_in_sym_list(s, list));
+	list = new_link(sl, list);
+	assert(sym_in_sym_list(s, list));
+
+	s = malloc(sizeof(struct symbol));
+	s->is_term = 0;
+	s->nt_name = "nt1";
+	sl = malloc(sizeof(struct sym_list));
+	sl->sym = s;
+	assert(!sym_in_sym_list(s, list));
+	list = new_link(sl, list);
+	assert(sym_in_sym_list(s, list));
+
+	s = malloc(sizeof(struct symbol));
+	s->is_term = 0;
+	s->nt_name = "nt2";
+	sl = malloc(sizeof(struct sym_list));
+	sl->sym = s;
+	assert(!sym_in_sym_list(s, list));
+	list = new_link(sl, list);
+	assert(sym_in_sym_list(s, list));
+
+	printf("%s passed\n", __func__);
+}
+
 void test_repr_sym()
 {
 	_sym = malloc(sizeof(struct symbol));
@@ -179,10 +224,119 @@ void test_fill_first_of_term_tab()
 	printf("%s passed\n", __func__);
 }
 
+void test_first_for_terms()
+{
+	for (int i = 0; i < HASHSIZE; i++)
+		productions[i] = NULL;
+	for (size_t i = 0; i < TK_TYPE_COUNT; i++)
+		term_in_grammar[i] = 0;
+
+	curr_prod = NULL;
+
+	curr_head = "head";
+	create_entry(curr_head, productions);
+
+	curr_sym = malloc(sizeof(struct symbol));
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nonterm";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_CMPL;
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_STR;
+	add_sym();
+
+	add_prod();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = EMPTY_STR;
+	add_sym();
+
+	add_prod();
+
+	fill_first_of_term_tab();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = EMPTY_STR;
+	assert(first(curr_sym) != NULL);
+	assert(first(curr_sym)->next == NULL);
+	assert(first(curr_sym)->sym != NULL);
+	assert(first(curr_sym)->sym->is_term);
+	assert(first(curr_sym)->sym->term_type == EMPTY_STR);
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_CMPL;
+	assert(first(curr_sym) != NULL);
+	assert(first(curr_sym)->next == NULL);
+	assert(first(curr_sym)->sym != NULL);
+	assert(first(curr_sym)->sym->is_term);
+	assert(first(curr_sym)->sym->term_type == TK_CMPL);
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_STR;
+	assert(first(curr_sym) != NULL);
+	assert(first(curr_sym)->next == NULL);
+	assert(first(curr_sym)->sym != NULL);
+	assert(first(curr_sym)->sym->is_term);
+	assert(first(curr_sym)->sym->term_type == TK_STR);
+
+	printf("%s passed\n", __func__);
+}
+
+void test_fill_nts_in_grammar_list()
+{
+	for (int i = 0; i < HASHSIZE; i++)
+		productions[i] = NULL;
+
+	curr_prod = NULL;
+
+	curr_head = "head";
+	create_entry(curr_head, productions);
+
+	curr_sym = malloc(sizeof(struct symbol));
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nonterm";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_CMPL;
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_STR;
+	add_sym();
+
+	add_prod();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = EMPTY_STR;
+	add_sym();
+
+	add_prod();
+
+	assert(nts_in_grammar == NULL);
+	fill_nts_in_grammar_list();
+	assert(nts_in_grammar != NULL);
+	struct symbol *s = malloc(sizeof(struct symbol));
+	s->is_term = 0;
+	s->nt_name = "head";
+	assert(sym_in_sym_list(s, nts_in_grammar));
+
+	printf("%s passed\n", __func__);
+}
+
 void test_grammar()
 {
+	test_sym_in_sym_list();
 	test_repr_sym();
 	test_add_sym();
 	test_add_prod();
 	test_fill_first_of_term_tab();
+	test_fill_nts_in_grammar_list();
+	test_first_for_terms();
 }

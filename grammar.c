@@ -5,34 +5,49 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 struct token tk;
 const char *curr_head;
 const char *start_sym;
 
-struct symbol {
-	int is_term;
-	enum tk_type term_type;
-	const char *nt_name;
-} *curr_sym;
+struct symbol *curr_sym, es_sym = {1, EMPTY_STR, NULL};
 
-struct sym_list {
-	struct sym_list *next;
-	struct symbol *sym;
-} *curr_prod, *first_of_term[TK_TYPE_COUNT];
+struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
-struct prod_list {
-	struct prod_list *next;
-	struct sym_list *prod;
-};
+struct prod_head_entry *productions[HASHSIZE];
 
-struct prod_head_entry {
-	struct prod_head_entry *next;
+struct first_of_nt_entry {
+	struct first_of_nt_entry *next;
 	const char *key;
-	struct prod_list *prods;
-} *productions[HASHSIZE];
+	struct sym_list *first;
+} *first_of_nt[HASHSIZE];
 
 int term_in_grammar[TK_TYPE_COUNT];
+
+int sym_in_sym_list(struct symbol *sym, struct sym_list *sl)
+{
+	assert(sym != NULL);
+	if (sym->is_term) {
+		for (; sl != NULL; sl = sl->next) {
+			assert(sl->sym != NULL);
+			if (!sl->sym->is_term)
+				continue;
+			if (sl->sym->term_type == sym->term_type)
+				return 1;
+		}
+		return 0;
+	}
+	for (; sl != NULL; sl = sl->next) {
+		assert(sl->sym != NULL);
+		if (sl->sym->is_term)
+			continue;
+		assert(sl->sym->nt_name != NULL);
+		if (strcmp(sl->sym->nt_name, sym->nt_name) == 0)
+			return 1;
+	}
+	return 0;
+}
 
 #define MAX_TERMLEN	8
 char *repr_sym(struct symbol *sym)
@@ -63,16 +78,15 @@ char *repr_sym(struct symbol *sym)
 	return repr;
 }
 
-void print_prod(struct sym_list *prod)
+void print_sym_list(struct sym_list *sl)
 {
 	char *sym_repr;
-	for (struct sym_list *sp = prod; sp != NULL; sp = sp->next) {
+	for (struct sym_list *sp = sl; sp != NULL; sp = sp->next) {
 		assert(sp->sym != NULL);
 		sym_repr = repr_sym(sp->sym);
 		printf(sp->sym->is_term ? "%s " : "<%s> ", sym_repr);
 		free(sym_repr);
 	}
-	putchar('\n');
 }
 
 void print_prods(struct prod_list *prods)
@@ -84,21 +98,34 @@ void print_prods(struct prod_list *prods)
 			first = 0;
 		else
 			printf("\t| ");
-		print_prod(pp->prod);
+		print_sym_list(pp->prod);
+		putchar('\n');
 	}
-	putchar('\n');
 }
 
 void print_grammar()
 {
-	for (int i = 0; i < HASHSIZE; i++) {
+	for (size_t i = 0; i < HASHSIZE; i++) {
 		if (productions[i] == NULL)
 			continue;
 		for (struct prod_head_entry *ep = productions[i]; ep != NULL; ep = ep->next) {
 			assert(ep->prods != NULL);
 			printf("<%s> ::= ", ep->key);
 			print_prods(ep->prods);
+			putchar('\n');
 		}
+	}
+}
+
+void print_first_tab()
+{
+	struct sym_list *nts = nts_in_grammar;
+	for (; nts != NULL; nts = nts->next) {
+		printf("FIRST(<%s>) = { ", nts->sym->nt_name);
+		struct first_of_nt_entry *e;
+		e = look_up(nts->sym->nt_name, first_of_nt);
+		print_sym_list(e->first);
+		printf("}\n");
 	}
 }
 
@@ -277,8 +304,112 @@ void fill_first_of_term_tab()
 	}
 }
 
-/* TODO
 struct sym_list *first(struct symbol *sym)
 {
+	/* FIRST(term) = {term} */
+	if (sym->is_term) {
+		assert(term_in_grammar[sym->term_type]);
+		assert(first_of_term[sym->term_type] != NULL);
+		return first_of_term[sym->term_type];
+	}
+	/* return FIRST(nt) if it had already been computed */
+	struct first_of_nt_entry *fnte;
+	if ((fnte = look_up(sym->nt_name, first_of_nt)) != NULL) {
+		assert(fnte->first != NULL);
+		return fnte->first;
+	}
+	fnte = create_entry(sym->nt_name, first_of_nt);
+	fnte->first = NULL;
+
+	int added_to_first = 1;
+	while (added_to_first) {
+
+	added_to_first = 0;
+	/* walk over every prod for sym */
+	struct prod_head_entry *phe;
+	phe = look_up(sym->nt_name, productions);
+	assert(phe != NULL);
+	struct prod_list *prdp = phe->prods;
+	assert(prdp != NULL);
+	for (; prdp != NULL; prdp = prdp->next) {
+		struct sym_list *prod = prdp->prod;
+		assert(prod != NULL);
+		assert(prod->sym != NULL);
+		/* if the prod is left-recursive, check
+		 * if FIRST(sym) already contains EMPTY_STR.
+		 * if it does, skip sym in the prod; if it
+		 * does not, skip the prod altogether.
+		 */
+		if (!sym->is_term && !prod->sym->is_term) {
+			assert(sym->nt_name != NULL);
+			assert(prod->sym->nt_name != NULL);
+			if (strcmp(prod->sym->nt_name, sym->nt_name) == 0) {
+				struct first_of_nt_entry *e;
+				e = look_up(sym->nt_name, first_of_nt);
+				if (e == NULL || !sym_in_sym_list(&es_sym,
+							e->first))
+					continue;
+				prod = prod->next; /* skip sym in prod */
+				if (prod == NULL)
+					panic("redundant production %s ::= %s",
+						sym->nt_name, sym->nt_name);
+			}
+		}
+		/* add FIRST(s) for every s in the prod, stop when
+		 * FIRST(s) does not contain the EMPTY_STR (when s
+		 * cannot be reduced to the empty string).
+		 */
+		int added_es = 1;
+		for (; prod != NULL; prod = prod->next) {
+			if (!added_es)
+				break;
+			added_es = 0;
+			struct sym_list *fsl = first(prod->sym);
+			assert(fsl != NULL);
+			for (; fsl != NULL; fsl = fsl->next) {
+				if (!sym_in_sym_list(fsl->sym, fnte->first)) {
+					struct sym_list *sl;
+					sl = malloc(sizeof(struct sym_list));
+					sl->sym = fsl->sym;
+					fnte->first = new_link(sl,
+							fnte->first);
+					added_to_first = 1;
+				}
+				if (fsl->sym->is_term &&
+						fsl->sym->term_type == EMPTY_STR)
+					added_es = 1;
+			}
+		}
+	}
+
+	}
+	return fnte->first;
 }
-*/
+
+void fill_nts_in_grammar_list()
+{
+	for (size_t i = 0; i < HASHSIZE; i++) {
+		if (productions[i] == NULL)
+			continue;
+		struct prod_head_entry *phe = productions[i];
+		for (; phe != NULL; phe = phe->next) {
+			struct symbol *nt = malloc(sizeof(struct symbol));
+			nt->is_term = 0;
+			nt->nt_name = phe->key;
+			struct sym_list *ntl = malloc(sizeof(struct sym_list));
+			ntl->sym = nt;
+
+			nts_in_grammar = new_link(ntl, nts_in_grammar);
+		}
+	}
+}
+
+void compute_first_tab()
+{
+	fill_first_of_term_tab();
+	fill_nts_in_grammar_list();
+	struct sym_list *nts = nts_in_grammar;
+	assert(nts != NULL);
+	for (; nts != NULL; nts = nts->next)
+		first(nts->sym);
+}

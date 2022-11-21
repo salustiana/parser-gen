@@ -1,0 +1,10 @@
+<expr> ::= <expr> `+` <term>
+	| <expr> `-` <term>
+	| <term>
+
+<term> ::= <term> `*` <fact>
+	| <term> `/` <fact>
+	| <fact>
+
+<fact> ::= `float`
+	| `(` <expr> `)`
