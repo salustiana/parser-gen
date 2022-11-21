@@ -37,10 +37,6 @@ extern struct prod_head_entry *productions[HASHSIZE];
 
 void parse_bn();
 
-void augment_grammar();
-
-void compute_first_tab();
-
 void print_grammar();
 
 void print_first_tab();

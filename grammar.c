@@ -25,6 +25,22 @@ struct first_of_nt_entry {
 
 int term_in_grammar[TK_TYPE_COUNT];
 
+void init_grammar()
+{
+	curr_head = start_sym = NULL;
+	curr_sym = NULL;
+	es_sym = (struct symbol) {1, EMPTY_STR, NULL};
+	curr_prod = nts_in_grammar = NULL;
+	for (size_t i = 0; i < TK_TYPE_COUNT; i++) {
+		first_of_term[i] = NULL;
+		term_in_grammar[i] = 0;
+	}
+	for (size_t i = 0; i < HASHSIZE; i++) {
+		productions[i] = NULL;
+		first_of_nt[i] = NULL;
+	}
+}
+
 int sym_in_sym_list(struct symbol *sym, struct sym_list *sl)
 {
 	assert(sym != NULL);
@@ -254,22 +270,6 @@ void parse_prods()
 	}
 }
 
-void parse_bn()
-{
-	next_token(&tk);
-	skip_tks("<");
-	if (tk.type != TK_ID)
-		panic("expected starting nonterm");
-	start_sym = strdup(tk.str_val);
-	next_token(&tk);
-	skip_tks(">::=");
-	curr_head = strdup(start_sym);
-	struct prod_head_entry *ne = create_entry(curr_head, productions);
-	ne->prods = NULL;
-	curr_sym = malloc(sizeof(struct symbol));
-	parse_prods();
-}
-
 void augment_grammar()
 {
 	assert(start_sym != NULL);
@@ -413,4 +413,23 @@ void compute_first_tab()
 	assert(nts != NULL);
 	for (; nts != NULL; nts = nts->next)
 		first(nts->sym);
+}
+
+void parse_bn()
+{
+	init_grammar();
+	next_token(&tk);
+	skip_tks("<");
+	if (tk.type != TK_ID)
+		panic("expected starting nonterm");
+	start_sym = strdup(tk.str_val);
+	next_token(&tk);
+	skip_tks(">::=");
+	curr_head = strdup(start_sym);
+	struct prod_head_entry *ne = create_entry(curr_head, productions);
+	ne->prods = NULL;
+	curr_sym = malloc(sizeof(struct symbol));
+	parse_prods();
+	augment_grammar();
+	compute_first_tab();
 }
