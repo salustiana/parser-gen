@@ -464,6 +464,9 @@ def compute_follow_tab():
                     if i == (len(prod)-1) or (
                             BN_ES not in first_of_sym_string(prod[i+1:])
                     ):
+                        if follow_tab.get(nt) == None:
+                            create_entry(nt, follow_tab)
+                            continue
                         for term in follow_tab[nt]:
                             if term not in follow_tab[s]:
                                 follow_tab[s].append(term)

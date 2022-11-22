@@ -11,7 +11,7 @@ struct token tk;
 const char *curr_head;
 const char *start_sym;
 
-struct symbol *curr_sym, es_sym = {1, EMPTY_STR, NULL};
+struct symbol *curr_sym, es_sym = {1,EMPTY_STR,NULL}, eoi_sym = {1,EOI,NULL};
 
 struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
@@ -38,6 +38,7 @@ void init_grammar()
 	for (size_t i = 0; i < HASHSIZE; i++) {
 		productions[i] = NULL;
 		first_of_nt[i] = NULL;
+		follow_tab[i] = NULL;
 	}
 }
 
@@ -141,6 +142,18 @@ void print_first_tab()
 		printf("FIRST(<%s>) = { ", nts->sym->nt_name);
 		struct sym_list_entry *e;
 		e = look_up(nts->sym->nt_name, first_of_nt);
+		print_sym_list(e->sl);
+		printf("}\n");
+	}
+}
+
+void print_follow_tab()
+{
+	struct sym_list *nts = nts_in_grammar;
+	for (; nts != NULL; nts = nts->next) {
+		printf("FOLLOW(<%s>) = { ", nts->sym->nt_name);
+		struct sym_list_entry *e;
+		e = look_up(nts->sym->nt_name, follow_tab);
 		print_sym_list(e->sl);
 		printf("}\n");
 	}
@@ -286,6 +299,7 @@ void augment_grammar()
 	curr_sym->nt_name = strdup(start_sym);
 	add_sym();
 	add_prod();
+	start_sym = curr_head;
 }
 
 void fill_first_of_term_tab()
@@ -408,7 +422,6 @@ void fill_nts_in_grammar_list()
 void compute_first_tab()
 {
 	fill_first_of_term_tab();
-	fill_nts_in_grammar_list();
 	struct sym_list *nts = nts_in_grammar;
 	assert(nts != NULL);
 	for (; nts != NULL; nts = nts->next)
@@ -455,6 +468,94 @@ struct sym_list *first_of_sym_list(struct sym_list *sl)
 	return f;
 }
 
+void compute_follow_tab()
+{
+	assert(look_up(start_sym, follow_tab) == NULL);
+	struct sym_list_entry *ssfe = create_entry(start_sym, follow_tab);
+	ssfe->sl = NULL;
+	struct sym_list *eoil = malloc(sizeof(struct sym_list));
+	/* place end of input marker (EOI) into FOLLOW(start_symbol) */
+	eoil->sym = &eoi_sym;
+	ssfe->sl = new_link(eoil, ssfe->sl);
+
+	/* until nothing can be added to follow */
+	int added_to_follow = 1;
+	while (added_to_follow) {
+
+	added_to_follow = 0;
+	struct sym_list *ntl = nts_in_grammar;
+	assert(ntl != NULL);
+
+	/* for every nonterminal */
+	for (; ntl != NULL; ntl = ntl->next) {
+
+	struct prod_head_entry *phe;
+	phe = look_up(ntl->sym->nt_name, productions);
+	struct prod_list *prdp = phe->prods;
+	assert(prdp != NULL);
+	for (; prdp != NULL; prdp = prdp->next) {
+		struct sym_list *prod = prdp->prod;
+		assert(prod != NULL);
+		for (; prod != NULL; prod = prod->next) {
+			struct symbol *s = prod->sym;
+			assert(s != NULL);
+			if (s->is_term)
+				continue;
+			struct sym_list_entry *sfle;
+			if ((sfle = look_up(s->nt_name, follow_tab)) == NULL)
+				sfle = create_entry(s->nt_name, follow_tab);
+			/* if A -> xBy add {FIRST(y) - EMPTY_STR} to
+			 * FOLLOW(B) (where x and y are sym strings).
+			 */
+			if (prod->next != NULL) { /* if y follows B */
+				struct sym_list *strf; /* FIRST(y) */
+				strf = first_of_sym_list(prod->next);
+				for (; strf != NULL; strf = strf->next) {
+					assert(strf->sym->is_term);
+					if (strf->sym->term_type == EMPTY_STR
+						|| sym_in_sym_list(strf->sym,
+								sfle->sl))
+						continue;
+					struct sym_list *slnk;
+					slnk = malloc(sizeof(*slnk));
+					slnk->sym = strf->sym;
+					sfle->sl = new_link(slnk, sfle->sl);
+					added_to_follow = 1;
+				}
+			}
+			/* if A->xB of (A->xBy and FIRST(y) has EMPTY_STR)
+			 * then add FOLLOW(A) to FOLLOW(B).
+			 */
+			if (prod->next == NULL ||
+					!sym_in_sym_list(&es_sym,
+					first_of_sym_list(prod->next))) {
+				struct sym_list_entry *phfe; /* FOLLOW(A) */
+				phfe = look_up(ntl->sym->nt_name, follow_tab);
+				if (phfe == NULL) {
+					phfe = create_entry(ntl->sym->nt_name,
+								follow_tab);
+					phfe->sl = NULL;
+					continue;
+				}
+				struct sym_list *phf = phfe->sl;
+				for (; phf != NULL; phf = phf->next) {
+					if (sym_in_sym_list(phf->sym, sfle->sl))
+						continue;
+					struct sym_list *slnk;
+					slnk = malloc(sizeof(*slnk));
+					slnk->sym = phf->sym;
+					sfle->sl = new_link(slnk, sfle->sl);
+					added_to_follow = 1;
+				}
+			}
+		}
+	}
+
+	}
+
+	}
+}
+
 void parse_bn()
 {
 	init_grammar();
@@ -470,5 +571,7 @@ void parse_bn()
 	ne->prods = NULL;
 	parse_prods();
 	augment_grammar();
+	fill_nts_in_grammar_list();
 	compute_first_tab();
+	compute_follow_tab();
 }

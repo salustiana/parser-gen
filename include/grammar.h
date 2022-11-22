@@ -4,9 +4,10 @@
 #include "lexer.h"
 #include "utils.h"
 
-/* XXX: EMPTY_STR is chosen to be
- * a value not present in enum tk_type.
+/* XXX: EOI and EMPTY_STR are chosen to be
+ * values not present in enum tk_type.
  */
+#define EOI		'$'
 #define EMPTY_STR	'@'
 
 struct symbol {
@@ -40,5 +41,7 @@ void parse_bn();
 void print_grammar();
 
 void print_first_tab();
+
+void print_follow_tab();
 
 #endif

@@ -5,6 +5,9 @@
 <stmtlist> ::= <stmtlist> <stmt>
 	| ``
 
+<optexpr> ::= <expr>
+	| ``
+
 <expr> ::= <expr> `+` <term>
 	| <term>
 

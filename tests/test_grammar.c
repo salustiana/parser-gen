@@ -422,6 +422,11 @@ void test_first_of_sym_list()
 	printf("%s passed\n", __func__);
 }
 
+void test_compute_follow_tab()
+{
+	// TODO
+}
+
 void test_parse_bn()
 {
 	init_lexer("./tests/arith_expr.bn");
