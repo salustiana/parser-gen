@@ -303,6 +303,125 @@ void test_fill_nts_in_grammar_list()
 	printf("%s passed\n", __func__);
 }
 
+void test_compute_first_tab()
+{
+	init_lexer("./tests/arith_expr.bn");
+	parse_bn();
+
+	struct first_of_nt_entry *fnte;
+	struct sym_list *f;
+	struct symbol *s = malloc(sizeof(struct symbol));
+
+	/* assert FIRST(expr) has 2 elements: { `(` and `TK_ID` } */
+	fnte = look_up("expr", first_of_nt);
+	assert(fnte != NULL);
+	f = fnte->first;
+	assert(f != NULL);
+	assert(f->next != NULL);
+	assert(f->next->next == NULL);
+	s->is_term = 1;
+	s->term_type = TK_ID;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_LPAR;
+	assert(sym_in_sym_list(s, f));
+
+	/* assert FIRST(term) has 2 elements: { `(` and `TK_ID` } */
+	fnte = look_up("term", first_of_nt);
+	assert(fnte != NULL);
+	f = fnte->first;
+	assert(f != NULL);
+	assert(f->next != NULL);
+	assert(f->next->next == NULL);
+	s->is_term = 1;
+	s->term_type = TK_ID;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_LPAR;
+	assert(sym_in_sym_list(s, f));
+
+	/* assert FIRST(fact) has 2 elements: { `(` and `TK_ID` } */
+	fnte = look_up("fact", first_of_nt);
+	assert(fnte != NULL);
+	f = fnte->first;
+	assert(f != NULL);
+	assert(f->next != NULL);
+	assert(f->next->next == NULL);
+	s->is_term = 1;
+	s->term_type = TK_ID;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_LPAR;
+	assert(sym_in_sym_list(s, f));
+
+	printf("%s passed\n", __func__);
+}
+
+void test_first_of_sym_list()
+{
+	init_lexer("./tests/arith_expr.bn");
+	parse_bn();
+
+	struct sym_list *sl1, *sl2, *sl3;
+	sl1 = malloc(sizeof(struct sym_list));
+	sl1->next = sl2 = malloc(sizeof(struct sym_list));
+	sl1->next->next = sl2->next = sl3 = malloc(sizeof(struct sym_list));
+	sl3->next = NULL;
+	sl1->sym = malloc(sizeof(struct symbol));
+	sl2->sym = malloc(sizeof(struct symbol));
+	sl3->sym = malloc(sizeof(struct symbol));
+
+	/* first_of_sym_list("expr"->"fact"->TK_RPAR) == { `(`, `TK_ID` } */
+	sl1->sym->is_term = 0;
+	sl2->sym->is_term = 0;
+	sl3->sym->is_term = 1;
+	sl1->sym->nt_name = "expr";
+	sl2->sym->nt_name = "fact";
+	sl3->sym->term_type = TK_RPAR;
+
+	struct symbol *s = malloc(sizeof(struct symbol));
+	struct sym_list *fosl = first_of_sym_list(sl1);
+	assert(fosl != NULL);
+	assert(fosl->next != NULL);
+	assert(fosl->next->next == NULL);
+
+	s->is_term = 1;
+	s->term_type = TK_LPAR;
+	assert(sym_in_sym_list(s, fosl));
+
+	s->term_type = TK_ID;
+	assert(sym_in_sym_list(s, fosl));
+
+	s->term_type = TK_RPAR;
+	assert(!sym_in_sym_list(s, fosl));
+
+	s->term_type = TK_ASTK;
+	assert(!sym_in_sym_list(s, fosl));
+
+	/* first_of_sym_list(TK_RPAR->"expr") == { `)` } */
+	sl1->sym->is_term = 1;
+	sl2->sym->is_term = 0;
+	sl1->sym->term_type = TK_RPAR;
+	sl2->sym->nt_name = "fact";
+	sl2->next = NULL;
+
+	fosl = first_of_sym_list(sl1);
+	assert(fosl != NULL);
+	assert(fosl->next == NULL);
+
+	s->is_term = 1;
+	s->term_type = TK_RPAR;
+	assert(sym_in_sym_list(s, fosl));
+
+	s->term_type = TK_LPAR;
+	assert(!sym_in_sym_list(s, fosl));
+
+	s->term_type = TK_ID;
+	assert(!sym_in_sym_list(s, fosl));
+
+	s->term_type = TK_ASTK;
+	assert(!sym_in_sym_list(s, fosl));
+
+	printf("%s passed\n", __func__);
+}
+
 void test_parse_bn()
 {
 	init_lexer("./tests/arith_expr.bn");
@@ -389,5 +508,7 @@ void test_grammar()
 	test_fill_first_of_term_tab();
 	test_fill_nts_in_grammar_list();
 	test_first_for_terms();
+	test_compute_first_tab();
+	test_first_of_sym_list();
 	test_parse_bn();
 }

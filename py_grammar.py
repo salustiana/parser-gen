@@ -420,7 +420,8 @@ def first_of_sym_string(sym_list):
         for s in first(sym):
             if s == BN_ES:
                 added_es = 1
-            else:
+                continue
+            if s not in ret:
                 ret.append(s)
     # add the empty string only if every
     # symbol in the string is nullable

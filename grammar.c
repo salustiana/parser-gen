@@ -415,6 +415,46 @@ void compute_first_tab()
 		first(nts->sym);
 }
 
+struct sym_list *first_of_sym_list(struct sym_list *sl)
+{
+	struct sym_list *f = NULL;
+	int all_have_es = 1;
+	int had_es = 1;
+	for (; sl != NULL; sl = sl->next) {
+		assert(sl->sym != NULL);
+		if (!had_es) {
+			all_have_es = 0;
+			break;
+		}
+		had_es = 0;
+		struct sym_list *sf = first(sl->sym);
+		assert(sf != NULL);
+		for (; sf != NULL; sf = sf->next) {
+			struct symbol *s = sf->sym;
+			assert(s != NULL);
+			if (s->is_term && s->term_type == EMPTY_STR) {
+				had_es = 1;
+				continue;
+			}
+			if (!sym_in_sym_list(s, f)) {
+				struct sym_list *slnk;
+				slnk = malloc(sizeof(struct sym_list));
+				slnk->sym = s;
+				f = new_link(slnk, f);
+			}
+		}
+	}
+	/* add the empty string only if every symbol in
+	 * the sym_list is nullable.
+	 */
+	if (all_have_es) {
+		struct sym_list *slnk = malloc(sizeof(struct sym_list));
+		slnk->sym = &es_sym;
+		f = new_link(slnk, f);
+	}
+	return f;
+}
+
 void parse_bn()
 {
 	init_grammar();
