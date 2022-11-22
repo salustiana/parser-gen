@@ -303,6 +303,83 @@ void test_fill_nts_in_grammar_list()
 	printf("%s passed\n", __func__);
 }
 
+void test_parse_bn()
+{
+	init_lexer("./tests/arith_expr.bn");
+	parse_bn();
+
+	assert(term_in_grammar[TK_PLUS]);
+	assert(term_in_grammar[TK_MINUS]);
+	assert(term_in_grammar[TK_ASTK]);
+	assert(term_in_grammar[TK_DIV]);
+	assert(term_in_grammar[TK_LPAR]);
+	assert(term_in_grammar[TK_RPAR]);
+	assert(term_in_grammar[TK_ID]);
+
+	assert(!term_in_grammar[TK_LBRCE]);
+	assert(!term_in_grammar[TK_CMPL]);
+	assert(!term_in_grammar[EMPTY_STR]);
+
+	struct prod_head_entry *phe;
+	struct prod_list *prdp;
+	struct symbol *s = malloc(sizeof(struct symbol));
+
+	s->is_term = 0;
+
+	s->nt_name = "expr_s"; /* augmented grammar */
+	assert(sym_in_sym_list(s, nts_in_grammar));
+	phe = look_up(s->nt_name, productions);
+	assert(phe != NULL);
+	assert(phe->next == NULL);
+	prdp = phe->prods;
+	assert(prdp != NULL);
+	assert(prdp->next == NULL);
+	assert(prdp->prod->next == NULL);
+	assert(!prdp->prod->sym->is_term);
+	assert(strcmp(prdp->prod->sym->nt_name, "expr") == 0);
+
+	s->nt_name = "expr";
+	assert(sym_in_sym_list(s, nts_in_grammar));
+	phe = look_up(s->nt_name, productions);
+	assert(phe != NULL);
+	prdp = phe->prods;
+	assert(prdp != NULL);
+	assert(!prdp->prod->sym->is_term);
+	for (; prdp != NULL; prdp = prdp->next) {
+		if (!strcmp(prdp->prod->sym->nt_name, "term")) {
+			assert(prdp->prod->next == NULL);
+			continue;
+		}
+		if (!strcmp(prdp->prod->sym->nt_name, "expr")) {
+			assert(prdp->prod->next->sym->is_term);
+			assert(strcmp(prdp->prod->next->next->sym->nt_name,
+								"term") == 0);
+			assert(prdp->prod->next->next->next == NULL);
+		}
+	}
+
+	s->nt_name = "term";
+	assert(sym_in_sym_list(s, nts_in_grammar));
+	phe = look_up(s->nt_name, productions);
+	assert(phe != NULL);
+	prdp = phe->prods;
+	assert(prdp != NULL);
+
+	s->nt_name = "fact";
+	assert(sym_in_sym_list(s, nts_in_grammar));
+	phe = look_up(s->nt_name, productions);
+	assert(phe != NULL);
+	prdp = phe->prods;
+	assert(prdp != NULL);
+
+	s->nt_name = "not_in_grammar";
+	assert(!sym_in_sym_list(s, nts_in_grammar));
+	phe = look_up(s->nt_name, productions);
+	assert(phe == NULL);
+
+	printf("%s passed\n", __func__);
+}
+
 void test_grammar()
 {
 	test_sym_in_sym_list();
@@ -312,4 +389,5 @@ void test_grammar()
 	test_fill_first_of_term_tab();
 	test_fill_nts_in_grammar_list();
 	test_first_for_terms();
+	test_parse_bn();
 }
