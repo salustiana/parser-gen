@@ -308,14 +308,14 @@ void test_compute_first_tab()
 	init_lexer("./tests/arith_expr.bn");
 	parse_bn();
 
-	struct first_of_nt_entry *fnte;
+	struct sym_list_entry *fnte;
 	struct sym_list *f;
 	struct symbol *s = malloc(sizeof(struct symbol));
 
 	/* assert FIRST(expr) has 2 elements: { `(` and `TK_ID` } */
 	fnte = look_up("expr", first_of_nt);
 	assert(fnte != NULL);
-	f = fnte->first;
+	f = fnte->sl;
 	assert(f != NULL);
 	assert(f->next != NULL);
 	assert(f->next->next == NULL);
@@ -328,7 +328,7 @@ void test_compute_first_tab()
 	/* assert FIRST(term) has 2 elements: { `(` and `TK_ID` } */
 	fnte = look_up("term", first_of_nt);
 	assert(fnte != NULL);
-	f = fnte->first;
+	f = fnte->sl;
 	assert(f != NULL);
 	assert(f->next != NULL);
 	assert(f->next->next == NULL);
@@ -341,7 +341,7 @@ void test_compute_first_tab()
 	/* assert FIRST(fact) has 2 elements: { `(` and `TK_ID` } */
 	fnte = look_up("fact", first_of_nt);
 	assert(fnte != NULL);
-	f = fnte->first;
+	f = fnte->sl;
 	assert(f != NULL);
 	assert(f->next != NULL);
 	assert(f->next->next == NULL);

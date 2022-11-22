@@ -17,11 +17,11 @@ struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
 struct prod_head_entry *productions[HASHSIZE];
 
-struct first_of_nt_entry {
-	struct first_of_nt_entry *next;
+struct sym_list_entry {
+	struct sym_list_entry *next;
 	const char *key;
-	struct sym_list *first;
-} *first_of_nt[HASHSIZE];
+	struct sym_list *sl;
+} *first_of_nt[HASHSIZE], *follow_tab[HASHSIZE];
 
 int term_in_grammar[TK_TYPE_COUNT];
 
@@ -139,9 +139,9 @@ void print_first_tab()
 	struct sym_list *nts = nts_in_grammar;
 	for (; nts != NULL; nts = nts->next) {
 		printf("FIRST(<%s>) = { ", nts->sym->nt_name);
-		struct first_of_nt_entry *e;
+		struct sym_list_entry *e;
 		e = look_up(nts->sym->nt_name, first_of_nt);
-		print_sym_list(e->first);
+		print_sym_list(e->sl);
 		printf("}\n");
 	}
 }
@@ -314,13 +314,13 @@ struct sym_list *first(struct symbol *sym)
 		return first_of_term[sym->term_type];
 	}
 	/* return FIRST(nt) if it had already been computed */
-	struct first_of_nt_entry *fnte;
+	struct sym_list_entry *fnte;
 	if ((fnte = look_up(sym->nt_name, first_of_nt)) != NULL) {
-		assert(fnte->first != NULL);
-		return fnte->first;
+		assert(fnte->sl != NULL);
+		return fnte->sl;
 	}
 	fnte = create_entry(sym->nt_name, first_of_nt);
-	fnte->first = NULL;
+	fnte->sl = NULL;
 
 	int added_to_first = 1;
 	while (added_to_first) {
@@ -345,10 +345,10 @@ struct sym_list *first(struct symbol *sym)
 			assert(sym->nt_name != NULL);
 			assert(prod->sym->nt_name != NULL);
 			if (strcmp(prod->sym->nt_name, sym->nt_name) == 0) {
-				struct first_of_nt_entry *e;
+				struct sym_list_entry *e;
 				e = look_up(sym->nt_name, first_of_nt);
 				if (e == NULL || !sym_in_sym_list(&es_sym,
-							e->first))
+							e->sl))
 					continue;
 				prod = prod->next; /* skip sym in prod */
 				if (prod == NULL)
@@ -368,12 +368,12 @@ struct sym_list *first(struct symbol *sym)
 			struct sym_list *fsl = first(prod->sym);
 			assert(fsl != NULL);
 			for (; fsl != NULL; fsl = fsl->next) {
-				if (!sym_in_sym_list(fsl->sym, fnte->first)) {
+				if (!sym_in_sym_list(fsl->sym, fnte->sl)) {
 					struct sym_list *sl;
 					sl = malloc(sizeof(struct sym_list));
 					sl->sym = fsl->sym;
-					fnte->first = new_link(sl,
-							fnte->first);
+					fnte->sl = new_link(sl,
+							fnte->sl);
 					added_to_first = 1;
 				}
 				if (fsl->sym->is_term &&
@@ -384,7 +384,7 @@ struct sym_list *first(struct symbol *sym)
 	}
 
 	}
-	return fnte->first;
+	return fnte->sl;
 }
 
 void fill_nts_in_grammar_list()
