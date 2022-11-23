@@ -306,6 +306,7 @@ void test_fill_nts_in_grammar_list()
 void test_compute_first_tab()
 {
 	init_lexer("./tests/arith_expr.bn");
+	init_grammar();
 	parse_bn();
 
 	struct sym_list_entry *fnte;
@@ -357,6 +358,7 @@ void test_compute_first_tab()
 void test_first_of_sym_list()
 {
 	init_lexer("./tests/arith_expr.bn");
+	init_grammar();
 	parse_bn();
 
 	struct sym_list *sl1, *sl2, *sl3;
@@ -424,7 +426,56 @@ void test_first_of_sym_list()
 
 void test_compute_follow_tab()
 {
-	// TODO
+	init_lexer("./tests/arith_expr.bn");
+	init_grammar();
+	parse_bn();
+	struct sym_list_entry *fle;
+	struct sym_list *f;
+	struct symbol *s = malloc(sizeof(struct symbol));
+
+	/* assert FOLLOW(expr) has 4 element: { `+`, `-`, `)`, `$` } */
+	fle = look_up("expr", follow_tab);
+	assert(fle != NULL);
+	f = fle->sl;
+	assert(f != NULL);
+	assert(f->next != NULL);
+	assert(f->next->next != NULL);
+	assert(f->next->next->next != NULL);
+	assert(f->next->next->next->next == NULL);
+	s->is_term = 1;
+	s->term_type = TK_PLUS;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_MINUS;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_RPAR;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = EOI;
+	assert(sym_in_sym_list(s, f));
+
+	/* assert FOLLOW(term) has 6 element:
+	 * { `+`, `-`, `*`, `/`, `)`, `$` }
+	 */
+	fle = look_up("term", follow_tab);
+	assert(fle != NULL);
+	f = fle->sl;
+	assert(f != NULL);
+	assert(f->next != NULL);
+	assert(f->next->next != NULL);
+	assert(f->next->next->next != NULL);
+	assert(f->next->next->next->next != NULL);
+	assert(f->next->next->next->next->next != NULL);
+	assert(f->next->next->next->next->next->next == NULL);
+	s->is_term = 1;
+	s->term_type = TK_ASTK;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_DIV;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = TK_RPAR;
+	assert(sym_in_sym_list(s, f));
+	s->term_type = EOI;
+	assert(sym_in_sym_list(s, f));
+
+	printf("%s passed\n", __func__);
 }
 
 void test_parse_bn()
@@ -514,6 +565,7 @@ void test_grammar()
 	test_fill_nts_in_grammar_list();
 	test_first_for_terms();
 	test_compute_first_tab();
+	test_compute_follow_tab();
 	test_first_of_sym_list();
 	test_parse_bn();
 }
