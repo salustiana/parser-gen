@@ -15,10 +15,20 @@ struct symbol *curr_sym, es_sym = {1,EMPTY_STR,NULL}, eoi_sym = {1,EOI,NULL};
 
 struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
+/* If an item is of the form [ A -> xB.y ], then
+ * `body` points to the whole production (`xBy` sym_list),
+ * and `dot` points to the sym_list remaining after the
+ * dot (`y` sym_list).
+ */
 struct item {
 	const char *head;
 	struct sym_list *body;
 	struct sym_list *dot;
+};
+
+struct itm_list {
+	struct itm_list *next;
+	struct item *itm;
 };
 
 struct prod_head_entry *productions[HASHSIZE];
@@ -68,6 +78,29 @@ int sym_in_sym_list(struct symbol *sym, struct sym_list *sl)
 		assert(sl->sym->nt_name != NULL);
 		if (strcmp(sl->sym->nt_name, sym->nt_name) == 0)
 			return 1;
+	}
+	return 0;
+}
+
+/*
+ * Compares items in il with itm. If any of them
+ * matches, returns 1, otherwise returns 0.
+ * XXX: items are compared by checking if the
+ * body pointers and dot pointers are equal.
+ * It does not check for "deep copies".
+ */
+int itm_in_itm_list(struct item *itm, struct itm_list *il)
+{
+	assert(itm != NULL);
+	for (; il != NULL; il = il->next) {
+		assert(il->itm != NULL);
+		if (il->itm->body != itm->body)
+			continue;
+		if (il->itm->dot != itm->dot)
+			continue;
+		if (strcmp(il->itm->head, itm->head) != 0)
+			continue;
+		return 1;
 	}
 	return 0;
 }

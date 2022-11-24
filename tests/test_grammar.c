@@ -558,8 +558,7 @@ void test_parse_bn()
 
 void test_print_item()
 {
-	init_grammar();
-
+	curr_prod = NULL;
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nt1";
 	add_sym();
@@ -572,9 +571,7 @@ void test_print_item()
 	curr_sym->nt_name = "nt2";
 	add_sym();
 
-	struct sym_list *body = curr_prod;
-	struct sym_list *dot = curr_prod->next->next;
-	struct item it = {"head", body, dot};
+	struct item it = {"head", curr_prod, curr_prod->next->next};
 
 	int out_pipe[2];
 	int saved_stdout = dup(STDOUT_FILENO);
@@ -588,6 +585,92 @@ void test_print_item()
 	read(out_pipe[0], out_str, 24);
 	assert(strcmp("[ head -> nt2 `~` .nt1 ]", out_str) == 0);
 	dup2(saved_stdout, STDOUT_FILENO);
+
+	printf("%s passed\n", __func__);
+}
+
+void test_itm_in_itm_list()
+{
+	curr_prod = NULL;
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt1";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_CMPL;
+	add_sym();
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt2";
+	add_sym();
+
+	struct item it1 = {"head1", curr_prod, curr_prod->next->next};
+
+	curr_prod = NULL;
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt1";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_LESS;
+	add_sym();
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt2";
+	add_sym();
+	struct item it2 = {"head2", curr_prod, curr_prod->next->next};
+
+	curr_prod = NULL;
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt1";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_GRT;
+	add_sym();
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt2";
+	add_sym();
+	struct item it3 = {"head3", curr_prod, curr_prod->next->next};
+
+	struct itm_list *ilnk1, *ilnk2, *ilnk3;
+	ilnk1 = malloc(sizeof(struct itm_list));
+	ilnk2 = malloc(sizeof(struct itm_list));
+	ilnk3 = malloc(sizeof(struct itm_list));
+
+	ilnk1->next = ilnk2;
+	ilnk2->next = ilnk3;
+	ilnk3->next = NULL;
+
+	ilnk1->itm = &it1;
+	ilnk2->itm = &it2;
+	ilnk3->itm = &it3;
+
+	assert(itm_in_itm_list(&it1, ilnk1));
+	assert(itm_in_itm_list(&it2, ilnk1));
+	assert(itm_in_itm_list(&it3, ilnk1));
+
+	struct item it = {"head4", it1.body, it1.dot};
+	assert(!itm_in_itm_list(&it, ilnk1));
+
+	it = (struct item) {"head1", it1.body, it1.body->next};
+	assert(!itm_in_itm_list(&it, ilnk1));
+
+	it = (struct item) {"head1", it1.body, it1.body};
+	assert(!itm_in_itm_list(&it, ilnk1));
+
+	it = (struct item) {"head1", it1.dot, it1.body};
+	assert(!itm_in_itm_list(&it, ilnk1));
+
+	it = (struct item) {"head1", NULL, it1.body};
+	assert(!itm_in_itm_list(&it, ilnk1));
+
+	it = (struct item) {"head1", it1.body, it1.dot};
+	assert(itm_in_itm_list(&it, ilnk1));
+
+	it = (struct item) {"head1", it1.body, it1.body->next->next};
+	assert(itm_in_itm_list(&it, ilnk1));
 
 	printf("%s passed\n", __func__);
 }
@@ -606,4 +689,5 @@ void test_grammar()
 	test_first_of_sym_list();
 	test_parse_bn();
 	test_print_item();
+	test_itm_in_itm_list();
 }
