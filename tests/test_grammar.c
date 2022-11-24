@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 struct symbol *_sym;
 
@@ -555,6 +556,42 @@ void test_parse_bn()
 	printf("%s passed\n", __func__);
 }
 
+void test_print_item()
+{
+	init_grammar();
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt1";
+	add_sym();
+
+	curr_sym->is_term = 1;
+	curr_sym->term_type = TK_CMPL;
+	add_sym();
+
+	curr_sym->is_term = 0;
+	curr_sym->nt_name = "nt2";
+	add_sym();
+
+	struct sym_list *body = curr_prod;
+	struct sym_list *dot = curr_prod->next->next;
+	struct item it = {"head", body, dot};
+
+	int out_pipe[2];
+	int saved_stdout = dup(STDOUT_FILENO);
+	assert(pipe(out_pipe) == 0);
+	dup2(out_pipe[1], STDOUT_FILENO);
+	close(out_pipe[1]);
+
+	print_item(&it);
+	fflush(stdout);
+	char out_str[24];
+	read(out_pipe[0], out_str, 24);
+	assert(strcmp("[ head -> nt2 `~` .nt1 ]", out_str) == 0);
+	dup2(saved_stdout, STDOUT_FILENO);
+
+	printf("%s passed\n", __func__);
+}
+
 void test_grammar()
 {
 	test_sym_in_sym_list();
@@ -568,4 +605,5 @@ void test_grammar()
 	test_compute_follow_tab();
 	test_first_of_sym_list();
 	test_parse_bn();
+	test_print_item();
 }

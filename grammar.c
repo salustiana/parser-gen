@@ -15,6 +15,12 @@ struct symbol *curr_sym, es_sym = {1,EMPTY_STR,NULL}, eoi_sym = {1,EOI,NULL};
 
 struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
+struct item {
+	const char *head;
+	struct sym_list *body;
+	struct sym_list *dot;
+};
+
 struct prod_head_entry *productions[HASHSIZE];
 
 struct sym_list_entry {
@@ -69,6 +75,7 @@ int sym_in_sym_list(struct symbol *sym, struct sym_list *sl)
 #define MAX_TERMLEN	8
 char *repr_sym(struct symbol *sym)
 {
+	assert(sym != NULL);
 	char *repr;
 	if (!sym->is_term) {
 		repr = strdup(sym->nt_name);
@@ -104,6 +111,26 @@ void print_sym_list(struct sym_list *sl)
 		printf(sp->sym->is_term ? "%s " : "<%s> ", sym_repr);
 		free(sym_repr);
 	}
+}
+
+void print_item(struct item *itm) {
+	assert(itm != NULL);
+	printf("[ %s -> ", itm->head);
+	struct sym_list *bp = itm->body;
+	struct sym_list *dp = itm->dot;
+	assert(bp != NULL);
+	char *sym_repr;
+	for (; bp != dp; bp = bp->next) {
+		sym_repr = repr_sym(bp->sym);
+		printf("%s ", sym_repr);
+	}
+	putchar('.');
+	for (; dp != NULL; dp = dp->next) {
+		sym_repr = repr_sym(dp->sym);
+		printf("%s ", sym_repr);
+	}
+	putchar(']');
+	free(sym_repr);
 }
 
 void print_prods(struct prod_list *prods)
