@@ -255,7 +255,7 @@ void add_prod()
 	new_prod->prod = curr_prod;
 	struct prod_head_entry *cnt = look_up(curr_head, productions);
 	assert(cnt != NULL);
-	cnt->prods = new_link(new_prod, cnt->prods);
+	ADD_LINK(new_prod, cnt->prods);
 	curr_prod = NULL;
 }
 
@@ -274,7 +274,7 @@ void add_sym()
 	/* add to curr_prod */
 	struct sym_list *new_sym = malloc(sizeof(struct sym_list));
 	new_sym->sym = curr_sym;
-	curr_prod = new_link(new_sym, curr_prod);
+	ADD_LINK(new_sym, curr_prod);
 
 	if (curr_sym->is_term)
 		term_in_grammar[curr_sym->term_type] = 1;
@@ -446,8 +446,7 @@ struct sym_list *first(struct symbol *sym)
 					struct sym_list *sl;
 					sl = malloc(sizeof(struct sym_list));
 					sl->sym = fsl->sym;
-					fnte->sl = new_link(sl,
-							fnte->sl);
+					ADD_LINK(sl, fnte->sl);
 					added_to_first = 1;
 				}
 				if (fsl->sym->is_term &&
@@ -474,7 +473,7 @@ void fill_nts_in_grammar_list()
 			struct sym_list *ntl = malloc(sizeof(struct sym_list));
 			ntl->sym = nt;
 
-			nts_in_grammar = new_link(ntl, nts_in_grammar);
+			ADD_LINK(ntl, nts_in_grammar);
 		}
 	}
 }
@@ -513,7 +512,7 @@ struct sym_list *first_of_sym_list(struct sym_list *sl)
 				struct sym_list *slnk;
 				slnk = malloc(sizeof(struct sym_list));
 				slnk->sym = s;
-				f = new_link(slnk, f);
+				ADD_LINK(slnk, f);
 			}
 		}
 	}
@@ -523,7 +522,7 @@ struct sym_list *first_of_sym_list(struct sym_list *sl)
 	if (all_have_es) {
 		struct sym_list *slnk = malloc(sizeof(struct sym_list));
 		slnk->sym = &es_sym;
-		f = new_link(slnk, f);
+		ADD_LINK(slnk, f);
 	}
 	return f;
 }
@@ -536,7 +535,7 @@ void compute_follow_tab()
 	struct sym_list *eoil = malloc(sizeof(struct sym_list));
 	/* place end of input marker (EOI) into FOLLOW(start_symbol) */
 	eoil->sym = &eoi_sym;
-	ssfe->sl = new_link(eoil, ssfe->sl);
+	ADD_LINK(eoil, ssfe->sl);
 
 	/* until nothing can be added to follow */
 	int added_to_follow = 1;
@@ -579,7 +578,7 @@ void compute_follow_tab()
 					struct sym_list *slnk;
 					slnk = malloc(sizeof(*slnk));
 					slnk->sym = strf->sym;
-					sfle->sl = new_link(slnk, sfle->sl);
+					ADD_LINK(slnk, sfle->sl);
 					added_to_follow = 1;
 				}
 			}
@@ -604,7 +603,7 @@ void compute_follow_tab()
 					struct sym_list *slnk;
 					slnk = malloc(sizeof(*slnk));
 					slnk->sym = phf->sym;
-					sfle->sl = new_link(slnk, sfle->sl);
+					ADD_LINK(slnk, sfle->sl);
 					added_to_follow = 1;
 				}
 			}

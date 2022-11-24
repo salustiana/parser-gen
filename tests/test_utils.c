@@ -8,14 +8,14 @@ struct _llist {
 	char cval;
 };
 
-void test_new_link()
+void test_ADD_LINK()
 {
 	struct _llist *lp = NULL, *np;
 	for (int i = 0; i < 5; i++) {
 		np = malloc(sizeof(struct _llist));
 		np->ival = i;
 		np->cval = (char) ('a' + i);
-		lp = new_link(np, lp);
+		ADD_LINK(np, lp);
 	}
 	int i = 4;
 	char s[] = "abcde";
@@ -35,7 +35,7 @@ void test_reverse_linked_list()
 		np = malloc(sizeof(struct _llist));
 		np->ival = i;
 		np->cval = (char) ('a' + i);
-		lp = new_link(np, lp);
+		ADD_LINK(np, lp);
 	}
 	int i = 0;
 	char s[] = "abcde";
@@ -88,7 +88,7 @@ void test_create_entry()
 
 void test_utils()
 {
-	test_new_link();
+	test_ADD_LINK();
 	test_reverse_linked_list();
 	test_look_up();
 	test_create_entry();

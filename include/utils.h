@@ -4,14 +4,17 @@
 #define HASHSIZE	101
 
 /*
- * Adds lnk to the start of llist and
- * returns a pointer to lnk (which should
- * be set as the new start of llist).
- * `next` should be the first member of lnk
- * and of every link on llist.
- * Usage: llist = new_link(lnk, llist);
+ * Adds LNK to the start of LIST and
+ * sets LIST to point to the new LNK.
+ * `next` should be the first member of LNK
+ * and of every link on LIST.
  */
-void *new_link(void *lnk, void *llist);
+#define ADD_LINK(LNK, LIST)	\
+do {				\
+	assert(LNK != NULL);	\
+	LNK->next = LIST;	\
+	LIST = LNK;		\
+} while (0)
 
 /*
  * Reverses the NULL terminated llist

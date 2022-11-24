@@ -18,7 +18,7 @@ void test_sym_in_sym_list()
 	sl = malloc(sizeof(struct sym_list));
 	sl->sym = s;
 	assert(!sym_in_sym_list(s, list));
-	list = new_link(sl, list);
+	ADD_LINK(sl, list);
 	assert(sym_in_sym_list(s, list));
 
 	s = malloc(sizeof(struct symbol));
@@ -27,7 +27,7 @@ void test_sym_in_sym_list()
 	sl = malloc(sizeof(struct sym_list));
 	sl->sym = s;
 	assert(!sym_in_sym_list(s, list));
-	list = new_link(sl, list);
+	ADD_LINK(sl, list);
 	assert(sym_in_sym_list(s, list));
 
 	s = malloc(sizeof(struct symbol));
@@ -36,7 +36,7 @@ void test_sym_in_sym_list()
 	sl = malloc(sizeof(struct sym_list));
 	sl->sym = s;
 	assert(!sym_in_sym_list(s, list));
-	list = new_link(sl, list);
+	ADD_LINK(sl, list);
 	assert(sym_in_sym_list(s, list));
 
 	s = malloc(sizeof(struct symbol));
@@ -45,7 +45,7 @@ void test_sym_in_sym_list()
 	sl = malloc(sizeof(struct sym_list));
 	sl->sym = s;
 	assert(!sym_in_sym_list(s, list));
-	list = new_link(sl, list);
+	ADD_LINK(sl, list);
 	assert(sym_in_sym_list(s, list));
 
 	printf("%s passed\n", __func__);
@@ -581,8 +581,8 @@ void test_print_item()
 
 	print_item(&it);
 	fflush(stdout);
-	char out_str[24];
-	read(out_pipe[0], out_str, 24);
+	char out_str[25];
+	read(out_pipe[0], out_str, 25);
 	assert(strcmp("[ head -> nt2 `~` .nt1 ]", out_str) == 0);
 	dup2(saved_stdout, STDOUT_FILENO);
 

@@ -5,30 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* TODO:
- * - Find a way to make these functions safer. It would be
- *   better not to silently convert from (void *) this much.
- */
-
 struct link {
 	struct link *next;
 };
-
-/*
- * Adds lnk to the start of llist and
- * returns a pointer to lnk (which should
- * be set as the new start of llist).
- * `next` should be the first member of lnk
- * and of every link on llist.
- * Usage: llist = new_link(lnk, llist);
- */
-void *new_link(void *lnk, void *llist)
-{
-	assert(lnk != NULL);
-	struct link *lk = lnk;
-	lk->next = llist;
-	return lk;
-}
 
 /*
  * Reverses the NULL terminated llist
