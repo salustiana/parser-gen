@@ -40,6 +40,36 @@ do {									\
 } while (0)
 
 /*
+ * Sets DEST to a new entry in TABLE for KEY.
+ * TABLE must not have an existing
+ * entry for the given KEY.
+ * TABLE should be an array of linked lists
+ * of entries which have `next` for their
+ * first member and `key` for their second
+ * member:
+ * struct entry {
+ * 	void *next;
+ * 	const char *key;
+ * 	...
+ * };)
+ * The size of TABLE should be HASHSIZE,
+ * which is defined in utils.h.
+ */
+#define INSERT_ENTRY(ENTRY, KEY, TABLE)		\
+do {						\
+	void *tmp = ENTRY;			\
+	LOOK_UP(ENTRY, KEY, TABLE);		\
+	assert(ENTRY == NULL);			\
+	ENTRY = tmp;				\
+	ENTRY->key = strdup(KEY);		\
+	assert(ENTRY->key != NULL);		\
+						\
+	unsigned int hash_val = hash(KEY);	\
+	ENTRY->next = TABLE[hash_val];		\
+	TABLE[hash_val] = ENTRY;		\
+} while (0)
+
+/*
  * Reverses the NULL terminated llist
  * and returns a pointer to its new
  * first element.
@@ -52,23 +82,5 @@ void *reverse_linked_list(void *llist);
 char *strdup(const char *s);
 
 char *extended_str(const char *base, const char *ext);
-
-/*
- * Creates a new entry in table for key.
- * The table must not have an existing
- * entry for the given key.
- * table should be an array of linked lists
- * of entries which have `next` for their
- * first member and `key` for their second
- * member:
- * struct entry {
- * 	void *next;
- * 	const char *key;
- * 	...
- * };)
- * The size of table should be HASHSIZE,
- * which is defined in utils.h.
- */
-void *create_entry(const char *key, void *table);
 
 #endif

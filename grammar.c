@@ -312,7 +312,8 @@ void parse_prods()
 			struct prod_head_entry *ne;
 			LOOK_UP(ne, curr_head, productions);
 			if (ne == NULL) {
-				ne = create_entry(curr_head, productions);
+				ne = malloc(sizeof(struct prod_head_entry));
+				INSERT_ENTRY(ne, curr_head, productions);
 				ne->prods = NULL;
 			}
 			break;
@@ -354,8 +355,8 @@ void augment_grammar()
 
 	curr_prod = NULL;
 	curr_head = extended_str(start_sym, "_s");
-	struct prod_head_entry *ne;
-	ne = create_entry(curr_head, productions);
+	struct prod_head_entry *ne = malloc(sizeof(struct prod_head_entry));
+	INSERT_ENTRY(ne, curr_head, productions);
 	ne->prods = NULL;
 
 	assert(curr_sym != NULL);
@@ -398,7 +399,8 @@ struct sym_list *first(struct symbol *sym)
 		assert(fnte->sl != NULL);
 		return fnte->sl;
 	}
-	fnte = create_entry(sym->nt_name, first_of_nt);
+	fnte = malloc(sizeof(struct sym_list_entry));
+	INSERT_ENTRY(fnte, sym->nt_name, first_of_nt);
 	fnte->sl = NULL;
 
 	int added_to_first = 1;
@@ -537,7 +539,8 @@ void compute_follow_tab()
 	struct sym_list_entry *ssfe;
 	LOOK_UP(ssfe, start_sym, follow_tab);
 	assert(ssfe == NULL);
-	ssfe = create_entry(start_sym, follow_tab);
+	ssfe = malloc(sizeof(struct sym_list_entry));
+	INSERT_ENTRY(ssfe, start_sym, follow_tab);
 	ssfe->sl = NULL;
 	struct sym_list *eoil = malloc(sizeof(struct sym_list));
 	/* place end of input marker (EOI) into FOLLOW(start_symbol) */
@@ -569,8 +572,10 @@ void compute_follow_tab()
 				continue;
 			struct sym_list_entry *sfle;
 			LOOK_UP(sfle, s->nt_name, follow_tab);
-			if (sfle == NULL)
-				sfle = create_entry(s->nt_name, follow_tab);
+			if (sfle == NULL) {
+				sfle = malloc(sizeof(struct sym_list_entry));
+				INSERT_ENTRY(sfle, s->nt_name, follow_tab);
+			}
 			/* if A -> xBy add {FIRST(y) - EMPTY_STR} to
 			 * FOLLOW(B) (where x and y are sym strings).
 			 */
@@ -599,7 +604,8 @@ void compute_follow_tab()
 				struct sym_list_entry *phfe; /* FOLLOW(A) */
 				LOOK_UP(phfe, ntl->sym->nt_name, follow_tab);
 				if (phfe == NULL) {
-					phfe = create_entry(ntl->sym->nt_name,
+					phfe = malloc(sizeof(*phfe));
+					INSERT_ENTRY(phfe, ntl->sym->nt_name,
 								follow_tab);
 					phfe->sl = NULL;
 					continue;
@@ -634,7 +640,8 @@ void parse_bn()
 	next_token(&tk);
 	skip_tks(">::=");
 	curr_head = strdup(start_sym);
-	struct prod_head_entry *ne = create_entry(curr_head, productions);
+	struct prod_head_entry *ne = malloc(sizeof(struct prod_head_entry));
+	INSERT_ENTRY(ne, curr_head, productions);
 	ne->prods = NULL;
 	parse_prods();
 	augment_grammar();

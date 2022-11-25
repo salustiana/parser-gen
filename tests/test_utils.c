@@ -79,7 +79,7 @@ void test_LOOK_UP()
 	printf("%s passed\n", __func__);
 }
 
-void test_create_entry()
+void test_INSERT_ENTRY()
 {
 	struct _entry {
 		struct _entry *next;
@@ -90,11 +90,12 @@ void test_create_entry()
 	for (int i = 0; i < HASHSIZE; i++)
 		_tab[i] = NULL;
 
-	struct _entry *e;
+	struct _entry *e, *_e;
 	LOOK_UP(e, "key", _tab);
 	assert(e == NULL);
 
-	create_entry("key", _tab);
+	_e = malloc(sizeof(struct _entry));
+	INSERT_ENTRY(_e, "key", _tab);
 	LOOK_UP(e, "key", _tab);
 	assert(e != NULL);
 
@@ -106,5 +107,5 @@ void test_utils()
 	test_ADD_LINK();
 	test_reverse_linked_list();
 	test_LOOK_UP();
-	test_create_entry();
+	test_INSERT_ENTRY();
 }

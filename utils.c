@@ -64,36 +64,3 @@ struct entry {
 	struct entry *next;
 	const char *key;
 };
-
-/*
- * Creates a new entry in table for key.
- * The table must not have an existing
- * entry for the given key.
- * table should be an array of linked lists
- * of entries which have `next` for their
- * first member and `key` for their second
- * member:
- * struct entry {
- * 	void *next;
- * 	const char *key;
- * 	...
- * };)
- * The size of table should be HASHSIZE,
- * which is defined in utils.h.
- */
-void *create_entry(const char *key, void *table)
-{
-	// TODO: turn this into a macro
-	// TODO: assert(LOOK_UP is NULL)
-	struct entry *ep = malloc(sizeof(struct entry));
-	assert(ep != NULL);
-
-	ep->key = strdup(key);
-	assert(ep->key != NULL);
-
-	struct entry **tab = table;
-	unsigned int hash_val = hash(key);
-	ep->next = tab[hash_val];
-	tab[hash_val] = ep;
-	return ep;
-}

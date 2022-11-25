@@ -108,7 +108,8 @@ void test_add_prod()
 	struct prod_head_entry *phe;
 	LOOK_UP(phe, curr_head, productions);
 	assert(phe == NULL);
-	create_entry(curr_head, productions);
+	struct prod_head_entry *_e = malloc(sizeof(struct prod_head_entry));
+	INSERT_ENTRY(_e, curr_head, productions);
 	LOOK_UP(phe, curr_head, productions);
 	assert(phe != NULL);
 
@@ -173,7 +174,8 @@ void test_fill_first_of_term_tab()
 	init_grammar();
 
 	curr_head = "head";
-	create_entry(curr_head, productions);
+	struct prod_head_entry *_e = malloc(sizeof(struct prod_head_entry));
+	INSERT_ENTRY(_e, curr_head, productions);
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
@@ -219,7 +221,8 @@ void test_first_for_terms()
 	init_grammar();
 
 	curr_head = "head";
-	create_entry(curr_head, productions);
+	struct prod_head_entry *_e = malloc(sizeof(struct prod_head_entry));
+	INSERT_ENTRY(_e, curr_head, productions);
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
@@ -275,7 +278,8 @@ void test_fill_nts_in_grammar_list()
 	init_grammar();
 
 	curr_head = "head";
-	create_entry(curr_head, productions);
+	struct prod_head_entry *_e = malloc(sizeof(struct prod_head_entry));
+	INSERT_ENTRY(_e, curr_head, productions);
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
