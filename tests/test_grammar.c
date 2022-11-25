@@ -591,6 +591,7 @@ void test_print_item()
 	fflush(stdout);
 	char out_str[25];
 	read(out_pipe[0], out_str, 25);
+	out_str[24] = '\0';
 	assert(strcmp("[ head -> nt2 `~` .nt1 ]", out_str) == 0);
 	dup2(saved_stdout, STDOUT_FILENO);
 
