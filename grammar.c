@@ -629,6 +629,68 @@ void compute_follow_tab()
 	}
 }
 
+struct itm_list *closure(struct itm_list *il)
+{
+	struct itm_list *clos = NULL;
+	/* add every item in il to clos */
+	for (; il != NULL; il = il->next) {
+		/* assert that il has no repeated items (is a set) */
+		assert(!itm_in_itm_list(il->itm, clos));
+		struct itm_list *ilnk = malloc(sizeof(struct itm_list));
+		ilnk->itm = il->itm;
+		ADD_LINK(ilnk, clos);
+	}
+
+	struct sym_list *added_nts = NULL;
+	int added_to_clos = 1;
+	while (added_to_clos) {
+
+	added_to_clos = 0;
+	for (struct itm_list *c = clos; c != NULL; c = c->next) {
+		struct item *itm = c->itm;
+		/* if itm is of the form [ A -> x.By ]
+		 * (where A, B are nonterms and x, y are symbol strings),
+		 * then add B -> .z to clos for every production B -> z
+		 * in the grammar.
+		 */
+		if (itm->dot == NULL || itm->dot->sym->is_term)
+			continue;
+		/* since adding one item of the form [ B -> .g ] implies
+		 * adding every item [ B -> .z ] for every B production
+		 * B -> z, then it is enough to check if B is in added_nts
+		 * to know if we should skip adding B items altoghether.
+		 */
+		if (sym_in_sym_list(itm->dot->sym, added_nts))
+			continue;
+		struct symbol *nt = itm->dot->sym;
+		struct prod_head_entry *phe;
+		LOOK_UP(phe, nt->nt_name, productions);
+		assert(phe != NULL);
+		struct prod_list *prods = phe->prods;
+		assert(prods != NULL);
+		for (; prods != NULL; prods = prods->next) {
+			struct sym_list *prod = prods->prod;
+			struct item *nitm = malloc(sizeof(struct item));
+			nitm->head = nt->nt_name;
+			nitm->body = prod;
+			nitm->dot = prod;
+			assert(!itm_in_itm_list(nitm, clos));
+			struct itm_list *nilnk;
+			nilnk = malloc(sizeof(struct itm_list));
+			nilnk->itm = nitm;
+			ADD_LINK(nilnk, clos);
+			added_to_clos = 1;
+		}
+		struct sym_list *antl = malloc(sizeof(struct sym_list));
+		antl->sym = itm->dot->sym;
+		ADD_LINK(antl, added_nts);
+	}
+
+	}
+
+	return clos;
+}
+
 void parse_bn()
 {
 	init_grammar();

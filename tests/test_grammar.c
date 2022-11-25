@@ -684,6 +684,79 @@ void test_itm_in_itm_list()
 	printf("%s passed\n", __func__);
 }
 
+void test_closure()
+{
+	init_lexer("./tests/arith_expr.bn");
+	init_grammar();
+	parse_bn();
+
+	/* check closure of [ E' -> .E ] */
+	struct item *si = malloc(sizeof(struct item));
+	si->head = "expr_s";
+	struct prod_head_entry *phe;
+	LOOK_UP(phe, "expr_s", productions);
+	si->body = phe->prods->prod;
+	si->dot = phe->prods->prod;
+	struct itm_list *sil = malloc(sizeof(struct itm_list));
+	sil->itm = si;
+	sil->next = NULL;
+
+	struct itm_list *c = closure(sil);
+
+	/* [ E' -> .E ] must be in c */
+	assert(itm_in_itm_list(si, c));
+
+	struct item *it = malloc(sizeof(struct item));
+
+	/* an item for every E prod must be in c:
+	 * [ E -> .T ], [ E -> .E + T ], [ E -> .E - T ]
+	 */
+	LOOK_UP(phe, "expr", productions);
+	it->head = "expr";
+	printf("CLOSURE({ ");
+	print_item(si);
+	printf(" }) = {\n");
+	for (; phe->prods != NULL; phe->prods = phe->prods->next) {
+		it->body = phe->prods->prod;
+		it->dot = phe->prods->prod;
+		putchar('\t');
+		print_item(it);
+		printf(",\n");
+		assert(itm_in_itm_list(it, c));
+	}
+
+	/* an item for every T prod must be in c:
+	 * [ T -> .F ], [ T -> .T * F ], [ T -> .T / F ]
+	 */
+	LOOK_UP(phe, "term", productions);
+	it->head = "term";
+	for (; phe->prods != NULL; phe->prods = phe->prods->next) {
+		it->body = phe->prods->prod;
+		it->dot = phe->prods->prod;
+		putchar('\t');
+		print_item(it);
+		printf(",\n");
+		assert(itm_in_itm_list(it, c));
+	}
+
+	/* an item for every F prod must be in c:
+	 * [ F -> .id ], [ F -> .( E ) ]
+	 */
+	LOOK_UP(phe, "fact", productions);
+	it->head = "fact";
+	for (; phe->prods != NULL; phe->prods = phe->prods->next) {
+		it->body = phe->prods->prod;
+		it->dot = phe->prods->prod;
+		putchar('\t');
+		print_item(it);
+		printf(",\n");
+		assert(itm_in_itm_list(it, c));
+	}
+	printf("}\n");
+
+	printf("%s passed\n", __func__);
+}
+
 void test_grammar()
 {
 	test_sym_in_sym_list();
@@ -699,4 +772,5 @@ void test_grammar()
 	test_parse_bn();
 	test_print_item();
 	test_itm_in_itm_list();
+	test_closure();
 }
