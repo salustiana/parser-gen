@@ -105,9 +105,12 @@ void test_add_prod()
 	init_grammar();
 
 	curr_head = "head";
-	assert(look_up(curr_head, productions) == NULL);
+	struct prod_head_entry *phe;
+	LOOK_UP(phe, curr_head, productions);
+	assert(phe == NULL);
 	create_entry(curr_head, productions);
-	assert(look_up(curr_head, productions) != NULL);
+	LOOK_UP(phe, curr_head, productions);
+	assert(phe != NULL);
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nonterm";
@@ -129,7 +132,8 @@ void test_add_prod()
 
 	add_prod();
 
-	struct prod_head_entry *ep = look_up(curr_head, productions);
+	struct prod_head_entry *ep;
+	LOOK_UP(ep, curr_head, productions);
 	assert(ep != NULL);
 
 	struct prod_list *pp;
@@ -315,7 +319,7 @@ void test_compute_first_tab()
 	struct symbol *s = malloc(sizeof(struct symbol));
 
 	/* assert FIRST(expr) has 2 elements: { `(` and `TK_ID` } */
-	fnte = look_up("expr", first_of_nt);
+	LOOK_UP(fnte, "expr", first_of_nt);
 	assert(fnte != NULL);
 	f = fnte->sl;
 	assert(f != NULL);
@@ -328,7 +332,7 @@ void test_compute_first_tab()
 	assert(sym_in_sym_list(s, f));
 
 	/* assert FIRST(term) has 2 elements: { `(` and `TK_ID` } */
-	fnte = look_up("term", first_of_nt);
+	LOOK_UP(fnte, "term", first_of_nt);
 	assert(fnte != NULL);
 	f = fnte->sl;
 	assert(f != NULL);
@@ -341,7 +345,7 @@ void test_compute_first_tab()
 	assert(sym_in_sym_list(s, f));
 
 	/* assert FIRST(fact) has 2 elements: { `(` and `TK_ID` } */
-	fnte = look_up("fact", first_of_nt);
+	LOOK_UP(fnte, "fact", first_of_nt);
 	assert(fnte != NULL);
 	f = fnte->sl;
 	assert(f != NULL);
@@ -435,7 +439,7 @@ void test_compute_follow_tab()
 	struct symbol *s = malloc(sizeof(struct symbol));
 
 	/* assert FOLLOW(expr) has 4 element: { `+`, `-`, `)`, `$` } */
-	fle = look_up("expr", follow_tab);
+	LOOK_UP(fle, "expr", follow_tab);
 	assert(fle != NULL);
 	f = fle->sl;
 	assert(f != NULL);
@@ -456,7 +460,7 @@ void test_compute_follow_tab()
 	/* assert FOLLOW(term) has 6 element:
 	 * { `+`, `-`, `*`, `/`, `)`, `$` }
 	 */
-	fle = look_up("term", follow_tab);
+	LOOK_UP(fle, "term", follow_tab);
 	assert(fle != NULL);
 	f = fle->sl;
 	assert(f != NULL);
@@ -504,7 +508,7 @@ void test_parse_bn()
 
 	s->nt_name = "expr_s"; /* augmented grammar */
 	assert(sym_in_sym_list(s, nts_in_grammar));
-	phe = look_up(s->nt_name, productions);
+	LOOK_UP(phe, s->nt_name, productions);
 	assert(phe != NULL);
 	assert(phe->next == NULL);
 	prdp = phe->prods;
@@ -516,7 +520,7 @@ void test_parse_bn()
 
 	s->nt_name = "expr";
 	assert(sym_in_sym_list(s, nts_in_grammar));
-	phe = look_up(s->nt_name, productions);
+	LOOK_UP(phe, s->nt_name, productions);
 	assert(phe != NULL);
 	prdp = phe->prods;
 	assert(prdp != NULL);
@@ -536,21 +540,21 @@ void test_parse_bn()
 
 	s->nt_name = "term";
 	assert(sym_in_sym_list(s, nts_in_grammar));
-	phe = look_up(s->nt_name, productions);
+	LOOK_UP(phe, s->nt_name, productions);
 	assert(phe != NULL);
 	prdp = phe->prods;
 	assert(prdp != NULL);
 
 	s->nt_name = "fact";
 	assert(sym_in_sym_list(s, nts_in_grammar));
-	phe = look_up(s->nt_name, productions);
+	LOOK_UP(phe, s->nt_name, productions);
 	assert(phe != NULL);
 	prdp = phe->prods;
 	assert(prdp != NULL);
 
 	s->nt_name = "not_in_grammar";
 	assert(!sym_in_sym_list(s, nts_in_grammar));
-	phe = look_up(s->nt_name, productions);
+	LOOK_UP(phe, s->nt_name, productions);
 	assert(phe == NULL);
 
 	printf("%s passed\n", __func__);

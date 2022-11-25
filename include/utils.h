@@ -17,6 +17,29 @@ do {				\
 } while (0)
 
 /*
+ * Sets DEST to the entry for KEY in TABLE or
+ * NULL if there is no entry for KEY.
+ * TABLE should be an array of linked lists
+ * of entries which have `next` for their
+ * first member and `key` for their second
+ * member:
+ * struct entry {
+ * 	struct entry *next;
+ * 	const char *key;
+ * 	...
+ * };)
+ * The size of table should be HASHSIZE,
+ * which is defined in utils.h.
+ */
+unsigned int hash(const char *s);
+#define LOOK_UP(DEST, KEY, TABLE)					\
+do {									\
+	for (DEST = TABLE[hash(KEY)]; DEST != NULL; DEST = DEST->next)	\
+		if (strcmp(KEY, DEST->key) == 0)			\
+			break;						\
+} while (0)
+
+/*
  * Reverses the NULL terminated llist
  * and returns a pointer to its new
  * first element.
@@ -29,24 +52,6 @@ void *reverse_linked_list(void *llist);
 char *strdup(const char *s);
 
 char *extended_str(const char *base, const char *ext);
-
-/*
- * Returns a pointer to the entry for
- * key in table, or NULL if table does
- * not contain an entry for key.
- * table should be an array of linked lists
- * of entries which have `next` for their
- * first member and `key` for their second
- * member:
- * struct entry {
- * 	struct entry *next;
- * 	const char *key;
- * 	...
- * };)
- * The size of table should be HASHSIZE,
- * which is defined in utils.h.
- */
-void *look_up(const char *key, void *table);
 
 /*
  * Creates a new entry in table for key.

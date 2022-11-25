@@ -66,32 +66,6 @@ struct entry {
 };
 
 /*
- * Returns a pointer to the entry for
- * key in table, or NULL if table does
- * not contain an entry for key.
- * table should be an array of linked lists
- * of entries which have `next` for their
- * first member and `key` for their second
- * member:
- * struct entry {
- * 	struct entry *next;
- * 	const char *key;
- * 	...
- * };)
- * The size of table should be HASHSIZE,
- * which is defined in utils.h.
- */
-void *look_up(const char *key, void *table)
-{
-	struct entry *ep, **tab = table;
-
-	for (ep = tab[hash(key)]; ep != NULL; ep = ep->next)
-		if (strcmp(key, ep->key) == 0)
-			return ep;
-	return NULL;
-}
-
-/*
  * Creates a new entry in table for key.
  * The table must not have an existing
  * entry for the given key.
@@ -109,8 +83,8 @@ void *look_up(const char *key, void *table)
  */
 void *create_entry(const char *key, void *table)
 {
-	assert(look_up(key, table) == NULL);
-
+	// TODO: turn this into a macro
+	// TODO: assert(LOOK_UP is NULL)
 	struct entry *ep = malloc(sizeof(struct entry));
 	assert(ep != NULL);
 

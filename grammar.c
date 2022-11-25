@@ -201,7 +201,7 @@ void print_first_tab()
 	for (; nts != NULL; nts = nts->next) {
 		printf("FIRST(<%s>) = { ", nts->sym->nt_name);
 		struct sym_list_entry *e;
-		e = look_up(nts->sym->nt_name, first_of_nt);
+		LOOK_UP(e, nts->sym->nt_name, first_of_nt);
 		print_sym_list(e->sl);
 		printf("}\n");
 	}
@@ -213,7 +213,7 @@ void print_follow_tab()
 	for (; nts != NULL; nts = nts->next) {
 		printf("FOLLOW(<%s>) = { ", nts->sym->nt_name);
 		struct sym_list_entry *e;
-		e = look_up(nts->sym->nt_name, follow_tab);
+		LOOK_UP(e, nts->sym->nt_name, follow_tab);
 		print_sym_list(e->sl);
 		printf("}\n");
 	}
@@ -253,7 +253,8 @@ void add_prod()
 	struct prod_list *new_prod = malloc(sizeof(struct prod_list));
 	assert(new_prod != NULL);
 	new_prod->prod = curr_prod;
-	struct prod_head_entry *cnt = look_up(curr_head, productions);
+	struct prod_head_entry *cnt;
+	LOOK_UP(cnt, curr_head, productions);
 	assert(cnt != NULL);
 	ADD_LINK(new_prod, cnt->prods);
 	curr_prod = NULL;
@@ -306,8 +307,9 @@ void parse_prods()
 			/* start prod for new def */
 			assert(curr_prod == NULL);
 			curr_head = strdup(curr_sym->nt_name);
-			if (look_up(curr_head, productions) == NULL) {
-				struct prod_head_entry *ne;
+			struct prod_head_entry *ne;
+			LOOK_UP(ne, curr_head, productions);
+			if (ne == NULL) {
 				ne = create_entry(curr_head, productions);
 				ne->prods = NULL;
 			}
@@ -389,7 +391,8 @@ struct sym_list *first(struct symbol *sym)
 	}
 	/* return FIRST(nt) if it had already been computed */
 	struct sym_list_entry *fnte;
-	if ((fnte = look_up(sym->nt_name, first_of_nt)) != NULL) {
+	LOOK_UP(fnte, sym->nt_name, first_of_nt);
+	if (fnte != NULL) {
 		assert(fnte->sl != NULL);
 		return fnte->sl;
 	}
@@ -402,7 +405,7 @@ struct sym_list *first(struct symbol *sym)
 	added_to_first = 0;
 	/* walk over every prod for sym */
 	struct prod_head_entry *phe;
-	phe = look_up(sym->nt_name, productions);
+	LOOK_UP(phe, sym->nt_name, productions);
 	assert(phe != NULL);
 	struct prod_list *prdp = phe->prods;
 	assert(prdp != NULL);
@@ -420,7 +423,7 @@ struct sym_list *first(struct symbol *sym)
 			assert(prod->sym->nt_name != NULL);
 			if (strcmp(prod->sym->nt_name, sym->nt_name) == 0) {
 				struct sym_list_entry *e;
-				e = look_up(sym->nt_name, first_of_nt);
+				LOOK_UP(e, sym->nt_name, first_of_nt);
 				if (e == NULL || !sym_in_sym_list(&es_sym,
 							e->sl))
 					continue;
@@ -529,8 +532,10 @@ struct sym_list *first_of_sym_list(struct sym_list *sl)
 
 void compute_follow_tab()
 {
-	assert(look_up(start_sym, follow_tab) == NULL);
-	struct sym_list_entry *ssfe = create_entry(start_sym, follow_tab);
+	struct sym_list_entry *ssfe;
+	LOOK_UP(ssfe, start_sym, follow_tab);
+	assert(ssfe == NULL);
+	ssfe = create_entry(start_sym, follow_tab);
 	ssfe->sl = NULL;
 	struct sym_list *eoil = malloc(sizeof(struct sym_list));
 	/* place end of input marker (EOI) into FOLLOW(start_symbol) */
@@ -549,7 +554,7 @@ void compute_follow_tab()
 	for (; ntl != NULL; ntl = ntl->next) {
 
 	struct prod_head_entry *phe;
-	phe = look_up(ntl->sym->nt_name, productions);
+	LOOK_UP(phe, ntl->sym->nt_name, productions);
 	struct prod_list *prdp = phe->prods;
 	assert(prdp != NULL);
 	for (; prdp != NULL; prdp = prdp->next) {
@@ -561,7 +566,8 @@ void compute_follow_tab()
 			if (s->is_term)
 				continue;
 			struct sym_list_entry *sfle;
-			if ((sfle = look_up(s->nt_name, follow_tab)) == NULL)
+			LOOK_UP(sfle, s->nt_name, follow_tab);
+			if (sfle == NULL)
 				sfle = create_entry(s->nt_name, follow_tab);
 			/* if A -> xBy add {FIRST(y) - EMPTY_STR} to
 			 * FOLLOW(B) (where x and y are sym strings).
@@ -589,7 +595,7 @@ void compute_follow_tab()
 					!sym_in_sym_list(&es_sym,
 					first_of_sym_list(prod->next))) {
 				struct sym_list_entry *phfe; /* FOLLOW(A) */
-				phfe = look_up(ntl->sym->nt_name, follow_tab);
+				LOOK_UP(phfe, ntl->sym->nt_name, follow_tab);
 				if (phfe == NULL) {
 					phfe = create_entry(ntl->sym->nt_name,
 								follow_tab);

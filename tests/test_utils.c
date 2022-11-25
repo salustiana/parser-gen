@@ -49,18 +49,21 @@ void test_reverse_linked_list()
 	printf("%s passed\n", __func__);
 }
 
-struct _entry {
-	struct _entry *next;
-	const char *key;
-	int ival;
-} *_tab[HASHSIZE];
-
-void test_look_up()
+void test_LOOK_UP()
 {
+	struct _entry {
+		struct _entry *next;
+		const char *key;
+		int ival;
+	} *_tab[HASHSIZE];
+
 	for (int i = 0; i < HASHSIZE; i++)
 		_tab[i] = NULL;
 
-	assert(look_up("key", _tab) == NULL);
+	struct _entry *dest;
+	LOOK_UP(dest, "key", _tab);
+	assert(dest == NULL);
+
 	struct _entry *ep = malloc(sizeof(struct _entry));
 	ep->next = NULL;
 	ep->key = "key";
@@ -68,20 +71,32 @@ void test_look_up()
 	unsigned int hash_val = hash(ep->key);
 	ep->next = _tab[hash_val];
 	_tab[hash_val] = ep;
-	assert(look_up("key", _tab) != NULL);
-	assert(((struct _entry *) look_up("key", _tab))->ival == 8);
+
+	LOOK_UP(dest, "key", _tab);
+	assert(dest != NULL);
+	assert(dest->ival == 8);
 
 	printf("%s passed\n", __func__);
 }
 
 void test_create_entry()
 {
+	struct _entry {
+		struct _entry *next;
+		const char *key;
+		int ival;
+	} *_tab[HASHSIZE];
+
 	for (int i = 0; i < HASHSIZE; i++)
 		_tab[i] = NULL;
 
-	assert(look_up("key", _tab) == NULL);
+	struct _entry *e;
+	LOOK_UP(e, "key", _tab);
+	assert(e == NULL);
+
 	create_entry("key", _tab);
-	assert(look_up("key", _tab) != NULL);
+	LOOK_UP(e, "key", _tab);
+	assert(e != NULL);
 
 	printf("%s passed\n", __func__);
 }
@@ -90,6 +105,6 @@ void test_utils()
 {
 	test_ADD_LINK();
 	test_reverse_linked_list();
-	test_look_up();
+	test_LOOK_UP();
 	test_create_entry();
 }
