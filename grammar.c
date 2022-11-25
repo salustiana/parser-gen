@@ -202,6 +202,7 @@ void print_first_tab()
 		printf("FIRST(<%s>) = { ", nts->sym->nt_name);
 		struct sym_list_entry *e;
 		LOOK_UP(e, nts->sym->nt_name, first_of_nt);
+		assert(e != NULL);
 		print_sym_list(e->sl);
 		printf("}\n");
 	}
@@ -214,6 +215,7 @@ void print_follow_tab()
 		printf("FOLLOW(<%s>) = { ", nts->sym->nt_name);
 		struct sym_list_entry *e;
 		LOOK_UP(e, nts->sym->nt_name, follow_tab);
+		assert(e != NULL);
 		print_sym_list(e->sl);
 		printf("}\n");
 	}
