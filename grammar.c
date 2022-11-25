@@ -691,6 +691,48 @@ struct itm_list *closure(struct itm_list *il)
 	return clos;
 }
 
+struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
+{
+	struct itm_list *g = NULL;
+	/* for every item of the form [ A -> x.By ] in il add
+	 * [ A -> xB.y ] to g (where B is sym).
+	 */
+	if (sym->is_term) {
+		for (; il != NULL; il = il->next) {
+			if (il->itm->dot == NULL)
+				continue;
+			struct symbol *sfd = il->itm->dot->sym;
+			if (!sfd->is_term || sfd->term_type != sym->term_type)
+				continue;
+			struct item *nit = malloc(sizeof(struct item));
+			nit->head = il->itm->head;
+			nit->body = il->itm->body;
+			nit->dot = il->itm->dot->next;
+			assert(!itm_in_itm_list(nit, g));
+			struct itm_list *nitlnk = malloc(sizeof(struct itm_list));
+			nitlnk->itm = nit;
+			ADD_LINK(nitlnk, g);
+		}
+		return closure(g);
+	}
+	for (; il != NULL; il = il->next) {
+		if (il->itm->dot == NULL)
+			continue;
+		struct symbol *sfd = il->itm->dot->sym;
+		if (sfd->is_term || strcmp(sfd->nt_name, sym->nt_name) != 0)
+			continue;
+		struct item *nit = malloc(sizeof(struct item));
+		nit->head = il->itm->head;
+		nit->body = il->itm->body;
+		nit->dot = il->itm->dot->next;
+		assert(!itm_in_itm_list(nit, g));
+		struct itm_list *nitlnk = malloc(sizeof(struct itm_list));
+		nitlnk->itm = nit;
+		ADD_LINK(nitlnk, g);
+	}
+	return closure(g);
+}
+
 void parse_bn()
 {
 	init_grammar();
