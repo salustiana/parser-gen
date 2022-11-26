@@ -850,4 +850,5 @@ void parse_bn()
 	fill_nts_in_grammar_list();
 	compute_first_tab();
 	compute_follow_tab();
+	compute_canon_set();
 }
