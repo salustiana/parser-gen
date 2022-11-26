@@ -31,6 +31,11 @@ struct itm_list {
 	struct item *itm;
 };
 
+struct itm_list_list {
+	struct itm_list_list *next;
+	struct itm_list *il;
+} *canon_set;
+
 struct prod_head_entry *productions[HASHSIZE];
 
 struct sym_list_entry {
@@ -217,6 +222,20 @@ void print_follow_tab()
 		LOOK_UP(e, nts->sym->nt_name, follow_tab);
 		assert(e != NULL);
 		print_sym_list(e->sl);
+		printf("}\n");
+	}
+}
+
+void print_canon_set()
+{
+	struct itm_list_list *c = canon_set;
+	for (size_t i = 0; c != NULL; c = c->next, i++) {
+		printf("I%zu = {\n", i);
+		for (struct itm_list *il = c->il; il != NULL; il = il->next) {
+			putchar('\t');
+			print_item(il->itm);
+			printf(",\n");
+		}
 		printf("}\n");
 	}
 }
@@ -731,6 +750,85 @@ struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
 		ADD_LINK(nitlnk, g);
 	}
 	return closure(g);
+}
+
+int add_itm_list_to_canon_set(struct itm_list *itml)
+{
+	if (itml == NULL)
+		return 0;
+	int in_canon;
+	struct itm_list_list *c = canon_set;
+	for (; c != NULL; c = c->next) {
+		in_canon = 1;
+		for (struct itm_list *il = itml; il != NULL; il = il->next) {
+			if (!itm_in_itm_list(il->itm, c->il)) {
+				in_canon = 0;
+				break;
+			}
+		}
+		if (in_canon)
+			break;
+	}
+	if (in_canon)
+		return 0;
+	struct itm_list_list *illnk;
+	illnk = malloc(sizeof(struct itm_list_list));
+	illnk->il = itml;
+	ADD_LINK(illnk, canon_set);
+	return 1;
+}
+
+void compute_canon_set()
+{
+	canon_set = NULL;
+	/* add CLOSURE({ [S'->.S] }) to canon_set */
+	struct prod_head_entry *sphe;
+	LOOK_UP(sphe, start_sym, productions);
+	assert(sphe != NULL);
+	assert(sphe->prods->next == NULL);
+	struct item *si = malloc(sizeof(struct item));
+	si->head = start_sym;
+	si->body = sphe->prods->prod;
+	si->dot = sphe->prods->prod;
+	struct itm_list *sil = malloc(sizeof(struct itm_list));
+	sil->itm = si;
+	sil->next = NULL;
+	struct itm_list_list *sill = malloc(sizeof(struct itm_list_list));
+	sill->il = closure(sil);
+	ADD_LINK(sill, canon_set);
+
+	int added_to_canon = 1;
+	while (added_to_canon) {
+
+	added_to_canon = 0;
+
+	struct itm_list_list *canon = canon_set;
+	for (; canon != NULL; canon = canon->next) {
+		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
+			if (!term_in_grammar[tt])
+				continue;
+			/* if GOTO(c->il, nts->sym) is not empty
+			 * and not in canon_set, then add it to canon_set
+			 */
+			struct symbol *sym = malloc(sizeof(struct symbol));
+			sym->is_term = 1;
+			sym->term_type = tt;
+			struct itm_list *go = go_to(canon->il, sym);
+			if (add_itm_list_to_canon_set(go))
+				added_to_canon = 1;
+		}
+		struct sym_list *nts = nts_in_grammar;
+		for (; nts != NULL; nts = nts->next) {
+			/* if GOTO(c->il, nts->sym) is not empty
+			 * and not in canon_set, then add it to canon_set
+			 */
+			struct itm_list *go = go_to(canon->il, nts->sym);
+			if (add_itm_list_to_canon_set(go))
+				added_to_canon = 1;
+		}
+	}
+
+	}
 }
 
 void parse_bn()

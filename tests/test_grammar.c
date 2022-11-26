@@ -810,6 +810,20 @@ void test_go_to()
 	printf("%s: check output above\n", __func__);
 }
 
+void test_compute_canon_set()
+{
+	init_lexer("./tests/arith_expr.bn");
+	init_grammar();
+	parse_bn();
+
+	compute_canon_set();
+
+	printf("CANON SET:\n");
+	print_canon_set();
+
+	printf("%s: check output above\n", __func__);
+}
+
 void test_grammar()
 {
 	test_sym_in_sym_list();
@@ -827,4 +841,5 @@ void test_grammar()
 	test_itm_in_itm_list();
 	test_closure();
 	test_go_to();
+	test_compute_canon_set();
 }
