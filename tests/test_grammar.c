@@ -824,6 +824,16 @@ void test_compute_canon_set()
 	printf("%s: check output above\n", __func__);
 }
 
+void test_find_itm_list_in_canon_set()
+{
+	// TODO
+}
+
+void test_add_goto_to_canon_set()
+{
+	// TODO
+}
+
 void test_grammar()
 {
 	test_sym_in_sym_list();

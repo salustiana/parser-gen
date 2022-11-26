@@ -26,9 +26,17 @@ struct item {
 	struct sym_list *dot;
 };
 
+struct goto_nt_rule_entry {
+	struct goto_nt_rule_entry *next;
+	const char *key;
+	struct itm_list *canon_itm;
+};
+
 struct itm_list {
 	struct itm_list *next;
 	struct item *itm;
+	struct goto_nt_rule_entry *gt_nt_rs[HASHSIZE];
+	struct itm_list *gt_term_rs[TK_TYPE_COUNT];
 };
 
 struct itm_list_list {
@@ -226,17 +234,39 @@ void print_follow_tab()
 	}
 }
 
+void print_itm_list_goto_rules(struct itm_list *itml)
+{
+	for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
+		void *term_rule = itml->gt_term_rs[tt];
+		if (term_rule == NULL)
+			continue;
+		printf("GOTO(%p, %d) = %p\n", (void *) itml, tt, term_rule);
+	}
+	struct goto_nt_rule_entry *gntre;
+	struct sym_list *nts = nts_in_grammar;
+	for (; nts != NULL; nts = nts->next) {
+		LOOK_UP(gntre, nts->sym->nt_name, itml->gt_nt_rs);
+		if (gntre == NULL)
+			continue;
+		printf("GOTO(%p, %s) = %p\n", (void *) itml,
+				nts->sym->nt_name, (void *) gntre->canon_itm);
+	}
+}
+
 void print_canon_set()
 {
 	struct itm_list_list *c = canon_set;
 	for (size_t i = 0; c != NULL; c = c->next, i++) {
-		printf("I%zu = {\n", i);
+		printf("I%zu (%p) = {\n", i, (void *) c->il);
 		for (struct itm_list *il = c->il; il != NULL; il = il->next) {
 			putchar('\t');
 			print_item(il->itm);
 			printf(",\n");
 		}
 		printf("}\n");
+		printf("GOTO RULES FOR I%zu:\n", i);
+		print_itm_list_goto_rules(c->il);
+		putchar('\n');
 	}
 }
 
@@ -752,29 +782,91 @@ struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
 	return closure(g);
 }
 
-int add_itm_list_to_canon_set(struct itm_list *itml)
+struct itm_list *find_itm_list_in_canon_set(struct itm_list *itml)
 {
-	if (itml == NULL)
-		return 0;
-	int in_canon;
+	struct itm_list *in_canon;
 	struct itm_list_list *c = canon_set;
+
 	for (; c != NULL; c = c->next) {
-		in_canon = 1;
-		for (struct itm_list *il = itml; il != NULL; il = il->next) {
+		in_canon = c->il;
+		struct itm_list *il = itml;
+		for (; il != NULL; il = il->next) {
 			if (!itm_in_itm_list(il->itm, c->il)) {
-				in_canon = 0;
+				in_canon = NULL;
 				break;
 			}
 		}
-		if (in_canon)
+		if (in_canon != NULL)
 			break;
 	}
-	if (in_canon)
+	return in_canon;
+}
+
+int add_goto_to_canon_set(struct itm_list *itml, struct symbol *sym)
+{
+	/* if GOTO(c->il, nts->sym) is not empty
+	 * and not in canon_set, then add it to canon_set
+	 */
+	struct itm_list *go = go_to(itml, sym);
+	if (go == NULL)
 		return 0;
+
+	struct itm_list *in_canon;
+	/* terms */
+	if (sym->is_term) {
+		/* look for the computed goto in canon_set */
+		in_canon = find_itm_list_in_canon_set(go);
+		if (in_canon != NULL) {
+			/* if found, set the itml goto rule for this
+			 * term to the existing itm_list in canon_set.
+			 */
+			itml->gt_term_rs[sym->term_type] = in_canon;
+			return 0;
+		}
+		/* if not found, add the computed goto to
+		 * the canon_set.
+		 */
+		struct itm_list_list *illnk;
+		illnk = malloc(sizeof(struct itm_list_list));
+		illnk->il = go;
+		ADD_LINK(illnk, canon_set);
+		/* set the itml goto rule for this term to
+		 * the newly added goto in canon_set.
+		 */
+		itml->gt_term_rs[sym->term_type] = go;
+		return 1;
+	}
+	/* nonterms */
+	/* look for the computed goto in canon_set */
+	in_canon = find_itm_list_in_canon_set(go);
+	if (in_canon != NULL) {
+		/* if found, set the itml goto_rule for this
+		 * nonterm to the existing itm_list in canon_set.
+		 */
+		struct goto_nt_rule_entry *gntre;
+		LOOK_UP(gntre, sym->nt_name, itml->gt_nt_rs);
+		if (gntre != NULL)
+			return 0;
+		gntre = malloc(sizeof(struct goto_nt_rule_entry));
+		gntre->canon_itm = in_canon;
+		INSERT_ENTRY(gntre, sym->nt_name, itml->gt_nt_rs);
+		return 0;
+	}
+	/* if not found, add the computed goto to the canon_set */
 	struct itm_list_list *illnk;
 	illnk = malloc(sizeof(struct itm_list_list));
-	illnk->il = itml;
+	illnk->il = go;
 	ADD_LINK(illnk, canon_set);
+	/* set the itml goto rule for this nonterm to
+	 * the newly added goto in canon_set.
+	 */
+	struct goto_nt_rule_entry *gntre;
+	LOOK_UP(gntre, sym->nt_name, itml->gt_nt_rs);
+	if (gntre != NULL)
+		return 0;
+	gntre = malloc(sizeof(struct goto_nt_rule_entry));
+	gntre->canon_itm = go;
+	INSERT_ENTRY(gntre, sym->nt_name, itml->gt_nt_rs);
 	return 1;
 }
 
@@ -807,23 +899,15 @@ void compute_canon_set()
 		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
 			if (!term_in_grammar[tt])
 				continue;
-			/* if GOTO(c->il, nts->sym) is not empty
-			 * and not in canon_set, then add it to canon_set
-			 */
 			struct symbol *sym = malloc(sizeof(struct symbol));
 			sym->is_term = 1;
 			sym->term_type = tt;
-			struct itm_list *go = go_to(canon->il, sym);
-			if (add_itm_list_to_canon_set(go))
+			if (add_goto_to_canon_set(canon->il, sym))
 				added_to_canon = 1;
 		}
 		struct sym_list *nts = nts_in_grammar;
 		for (; nts != NULL; nts = nts->next) {
-			/* if GOTO(c->il, nts->sym) is not empty
-			 * and not in canon_set, then add it to canon_set
-			 */
-			struct itm_list *go = go_to(canon->il, nts->sym);
-			if (add_itm_list_to_canon_set(go))
+			if (add_goto_to_canon_set(canon->il, nts->sym))
 				added_to_canon = 1;
 		}
 	}
