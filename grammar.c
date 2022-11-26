@@ -21,6 +21,13 @@ struct symbol *make_symbol(int is_term, enum tk_type term_type,
 	return s;
 }
 
+struct sym_list *add_sym_to_list(struct symbol *sym, struct sym_list **slp) {
+	struct sym_list *slnk = malloc(sizeof(struct sym_list));
+	slnk->sym = sym;
+	ADD_LINK(slnk, *slp);
+	return slnk;
+}
+
 struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
 /* If an item is of the form [ A -> xB.y ], then
@@ -331,10 +338,7 @@ void add_prod()
  */
 void add_sym()
 {
-	/* add to curr_prod */
-	struct sym_list *nslnk = malloc(sizeof(struct sym_list));
-	nslnk->sym = curr_sym;
-	ADD_LINK(nslnk, curr_prod);
+	add_sym_to_list(curr_sym, &curr_prod);
 
 	if (curr_sym->is_term)
 		term_in_grammar[curr_sym->term_type] = 1;
@@ -432,10 +436,8 @@ void fill_first_of_term_tab()
 			continue;
 		}
 		struct symbol *t = make_symbol(1, tt, NULL);
-		struct sym_list *sl = malloc(sizeof(struct sym_list));
-		sl->next = NULL;
-		sl->sym = t;
-		first_of_term[tt] = sl;
+		first_of_term[tt] = NULL;
+		add_sym_to_list(t, &first_of_term[tt]);
 	}
 }
 
@@ -505,10 +507,7 @@ struct sym_list *first(struct symbol *sym)
 			assert(fsl != NULL);
 			for (; fsl != NULL; fsl = fsl->next) {
 				if (!sym_in_sym_list(fsl->sym, fnte->sl)) {
-					struct sym_list *sl;
-					sl = malloc(sizeof(struct sym_list));
-					sl->sym = fsl->sym;
-					ADD_LINK(sl, fnte->sl);
+					add_sym_to_list(fsl->sym, &fnte->sl);
 					added_to_first = 1;
 				}
 				if (fsl->sym->is_term &&
@@ -530,10 +529,7 @@ void fill_nts_in_grammar_list()
 		struct prod_head_entry *phe = productions[i];
 		for (; phe != NULL; phe = phe->next) {
 			struct symbol *nt = make_symbol(0, 0, phe->key);
-			struct sym_list *ntl = malloc(sizeof(struct sym_list));
-			ntl->sym = nt;
-
-			ADD_LINK(ntl, nts_in_grammar);
+			add_sym_to_list(nt, &nts_in_grammar);
 		}
 	}
 }
@@ -568,22 +564,15 @@ struct sym_list *first_of_sym_list(struct sym_list *sl)
 				had_es = 1;
 				continue;
 			}
-			if (!sym_in_sym_list(s, f)) {
-				struct sym_list *slnk;
-				slnk = malloc(sizeof(struct sym_list));
-				slnk->sym = s;
-				ADD_LINK(slnk, f);
-			}
+			if (!sym_in_sym_list(s, f))
+				add_sym_to_list(s, &f);
 		}
 	}
 	/* add the empty string only if every symbol in
 	 * the sym_list is nullable.
 	 */
-	if (all_have_es) {
-		struct sym_list *slnk = malloc(sizeof(struct sym_list));
-		slnk->sym = &es_sym;
-		ADD_LINK(slnk, f);
-	}
+	if (all_have_es)
+		add_sym_to_list(&es_sym, &f);
 	return f;
 }
 
@@ -595,10 +584,8 @@ void compute_follow_tab()
 	ssfe = malloc(sizeof(struct sym_list_entry));
 	INSERT_ENTRY(ssfe, start_sym, follow_tab);
 	ssfe->sl = NULL;
-	struct sym_list *eoil = malloc(sizeof(struct sym_list));
 	/* place end of input marker (EOI) into FOLLOW(start_symbol) */
-	eoil->sym = &eoi_sym;
-	ADD_LINK(eoil, ssfe->sl);
+	add_sym_to_list(&eoi_sym, &ssfe->sl);
 
 	/* until nothing can be added to follow */
 	int added_to_follow = 1;
@@ -734,9 +721,7 @@ struct itm_list *closure(struct itm_list *il)
 			ADD_LINK(nilnk, clos);
 			added_to_clos = 1;
 		}
-		struct sym_list *antl = malloc(sizeof(struct sym_list));
-		antl->sym = itm->dot->sym;
-		ADD_LINK(antl, added_nts);
+		add_sym_to_list(itm->dot->sym, &added_nts);
 	}
 
 	}
