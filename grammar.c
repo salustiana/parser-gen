@@ -41,6 +41,15 @@ struct item {
 	struct sym_list *dot;
 };
 
+struct item *make_item(const char *head, struct sym_list *body,
+						struct sym_list *dot) {
+	struct item *it = malloc(sizeof(struct item));
+	it->head = head;
+	it->body = body;
+	it->dot = dot;
+	return it;
+}
+
 struct goto_nt_rule_entry {
 	struct goto_nt_rule_entry *next;
 	const char *key;
@@ -710,10 +719,7 @@ struct itm_list *closure(struct itm_list *il)
 		assert(prods != NULL);
 		for (; prods != NULL; prods = prods->next) {
 			struct sym_list *prod = prods->prod;
-			struct item *nitm = malloc(sizeof(struct item));
-			nitm->head = nt->nt_name;
-			nitm->body = prod;
-			nitm->dot = prod;
+			struct item *nitm = make_item(nt->nt_name, prod, prod);
 			assert(!itm_in_itm_list(nitm, clos));
 			struct itm_list *nilnk;
 			nilnk = malloc(sizeof(struct itm_list));
@@ -742,10 +748,8 @@ struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
 			struct symbol *sfd = il->itm->dot->sym;
 			if (!sfd->is_term || sfd->term_type != sym->term_type)
 				continue;
-			struct item *nit = malloc(sizeof(struct item));
-			nit->head = il->itm->head;
-			nit->body = il->itm->body;
-			nit->dot = il->itm->dot->next;
+			struct item *nit = make_item(il->itm->head,
+					il->itm->body, il->itm->dot->next);
 			assert(!itm_in_itm_list(nit, g));
 			struct itm_list *nitlnk = malloc(sizeof(struct itm_list));
 			nitlnk->itm = nit;
@@ -759,10 +763,8 @@ struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
 		struct symbol *sfd = il->itm->dot->sym;
 		if (sfd->is_term || strcmp(sfd->nt_name, sym->nt_name) != 0)
 			continue;
-		struct item *nit = malloc(sizeof(struct item));
-		nit->head = il->itm->head;
-		nit->body = il->itm->body;
-		nit->dot = il->itm->dot->next;
+		struct item *nit = make_item(il->itm->head, il->itm->body,
+							il->itm->dot->next);
 		assert(!itm_in_itm_list(nit, g));
 		struct itm_list *nitlnk = malloc(sizeof(struct itm_list));
 		nitlnk->itm = nit;
@@ -862,10 +864,8 @@ void compute_canon_set()
 	LOOK_UP(sphe, start_sym, productions);
 	assert(sphe != NULL);
 	assert(sphe->prods->next == NULL);
-	struct item *si = malloc(sizeof(struct item));
-	si->head = start_sym;
-	si->body = sphe->prods->prod;
-	si->dot = sphe->prods->prod;
+	struct item *si = make_item(start_sym, sphe->prods->prod,
+						sphe->prods->prod);
 	struct itm_list *sil = malloc(sizeof(struct itm_list));
 	sil->itm = si;
 	sil->next = NULL;
