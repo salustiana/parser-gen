@@ -63,6 +63,13 @@ struct itm_list {
 	struct itm_list *gt_term_rs[TK_TYPE_COUNT];
 };
 
+struct itm_list *add_itm_to_list(struct item *itm, struct itm_list **il) {
+	struct itm_list *ilnk = malloc(sizeof(struct itm_list));
+	ilnk->itm = itm;
+	ADD_LINK(ilnk, *il);
+	return ilnk;
+}
+
 struct itm_list_list {
 	struct itm_list_list *next;
 	struct itm_list *il;
@@ -685,9 +692,7 @@ struct itm_list *closure(struct itm_list *il)
 	for (; il != NULL; il = il->next) {
 		/* assert that il has no repeated items (is a set) */
 		assert(!itm_in_itm_list(il->itm, clos));
-		struct itm_list *ilnk = malloc(sizeof(struct itm_list));
-		ilnk->itm = il->itm;
-		ADD_LINK(ilnk, clos);
+		add_itm_to_list(il->itm, &clos);
 	}
 
 	struct sym_list *added_nts = NULL;
@@ -721,10 +726,7 @@ struct itm_list *closure(struct itm_list *il)
 			struct sym_list *prod = prods->prod;
 			struct item *nitm = make_item(nt->nt_name, prod, prod);
 			assert(!itm_in_itm_list(nitm, clos));
-			struct itm_list *nilnk;
-			nilnk = malloc(sizeof(struct itm_list));
-			nilnk->itm = nitm;
-			ADD_LINK(nilnk, clos);
+			add_itm_to_list(nitm, &clos);
 			added_to_clos = 1;
 		}
 		add_sym_to_list(itm->dot->sym, &added_nts);
@@ -751,9 +753,7 @@ struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
 			struct item *nit = make_item(il->itm->head,
 					il->itm->body, il->itm->dot->next);
 			assert(!itm_in_itm_list(nit, g));
-			struct itm_list *nitlnk = malloc(sizeof(struct itm_list));
-			nitlnk->itm = nit;
-			ADD_LINK(nitlnk, g);
+			add_itm_to_list(nit, &g);
 		}
 		return closure(g);
 	}
@@ -766,9 +766,7 @@ struct itm_list *go_to(struct itm_list *il, struct symbol *sym)
 		struct item *nit = make_item(il->itm->head, il->itm->body,
 							il->itm->dot->next);
 		assert(!itm_in_itm_list(nit, g));
-		struct itm_list *nitlnk = malloc(sizeof(struct itm_list));
-		nitlnk->itm = nit;
-		ADD_LINK(nitlnk, g);
+		add_itm_to_list(nit, &g);
 	}
 	return closure(g);
 }
@@ -866,9 +864,8 @@ void compute_canon_set()
 	assert(sphe->prods->next == NULL);
 	struct item *si = make_item(start_sym, sphe->prods->prod,
 						sphe->prods->prod);
-	struct itm_list *sil = malloc(sizeof(struct itm_list));
-	sil->itm = si;
-	sil->next = NULL;
+	struct itm_list *sil = NULL;
+	add_itm_to_list(si, &sil);
 	struct itm_list_list *sill = malloc(sizeof(struct itm_list_list));
 	sill->il = closure(sil);
 	ADD_LINK(sill, canon_set);
