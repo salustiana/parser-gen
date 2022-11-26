@@ -757,6 +757,49 @@ void test_closure()
 	printf("%s passed\n", __func__);
 }
 
+void test_find_itm_list_in_canon_set()
+{
+	canon_set = NULL;
+	/* add { [ E' -> E. ], [ E -> E .+ T ] } to canon_set */
+	struct item *it1 = malloc(sizeof(struct item));
+	it1->head = "expr_s";
+	struct prod_head_entry *phe;
+	LOOK_UP(phe, "expr_s", productions);
+	it1->body = phe->prods->prod;
+	it1->dot = phe->prods->prod->next;
+
+	struct item *it2 = malloc(sizeof(struct item));
+	it2->head = "expr";
+	it2->body = malloc(sizeof(struct sym_list));
+	it2->body->sym = malloc(sizeof(struct symbol));
+	it2->body->next = malloc(sizeof(struct sym_list));
+	it2->body->next->sym = malloc(sizeof(struct symbol));
+	it2->body->next->next = malloc(sizeof(struct sym_list));
+	it2->body->next->next->sym = malloc(sizeof(struct symbol));
+	it2->body->sym->is_term = 0;
+	it2->body->sym->nt_name = "expr";
+	it2->body->next->sym->is_term = 1;
+	it2->body->next->sym->term_type = TK_PLUS;
+	it2->body->next->next->sym->is_term = 0;
+	it2->body->next->next->sym->nt_name = "term";
+	it2->dot = it2->body->next;
+
+	struct itm_list *itl1 = malloc(sizeof(struct itm_list));
+	struct itm_list *itl2 = malloc(sizeof(struct itm_list));
+	itl1->next = itl2;
+	itl1->itm = it1;
+	itl2->itm = it2;
+	itl2->next = NULL;
+
+	struct itm_list_list *itllnk = malloc(sizeof(struct itm_list_list));
+	itllnk->il = itl1;
+	ADD_LINK(itllnk, canon_set);
+
+	assert(find_itm_list_in_canon_set(itl1) == itl1);
+
+	printf("%s passed\n", __func__);
+}
+
 void test_go_to()
 {
 	init_lexer("./tests/arith_expr.bn");
@@ -824,16 +867,6 @@ void test_compute_canon_set()
 	printf("%s: check output above\n", __func__);
 }
 
-void test_find_itm_list_in_canon_set()
-{
-	// TODO
-}
-
-void test_add_goto_to_canon_set()
-{
-	// TODO
-}
-
 void test_grammar()
 {
 	test_sym_in_sym_list();
@@ -850,6 +883,7 @@ void test_grammar()
 	test_print_item();
 	test_itm_in_itm_list();
 	test_closure();
+	test_find_itm_list_in_canon_set();
 	test_go_to();
 	test_compute_canon_set();
 }

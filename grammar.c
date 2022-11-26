@@ -804,21 +804,17 @@ struct itm_list *find_itm_list_in_canon_set(struct itm_list *itml)
 
 int add_goto_to_canon_set(struct itm_list *itml, struct symbol *sym)
 {
-	/* if GOTO(c->il, nts->sym) is not empty
-	 * and not in canon_set, then add it to canon_set
-	 */
 	struct itm_list *go = go_to(itml, sym);
 	if (go == NULL)
 		return 0;
 
 	struct itm_list *in_canon;
-	/* terms */
 	if (sym->is_term) {
-		/* look for the computed goto in canon_set */
 		in_canon = find_itm_list_in_canon_set(go);
 		if (in_canon != NULL) {
-			/* if found, set the itml goto rule for this
-			 * term to the existing itm_list in canon_set.
+			/* if go is already in canon_set, set the itml
+			 * goto rule for this term to the existing
+			 * itm_list in canon_set.
 			 */
 			itml->gt_term_rs[sym->term_type] = in_canon;
 			return 0;
@@ -836,12 +832,11 @@ int add_goto_to_canon_set(struct itm_list *itml, struct symbol *sym)
 		itml->gt_term_rs[sym->term_type] = go;
 		return 1;
 	}
-	/* nonterms */
-	/* look for the computed goto in canon_set */
 	in_canon = find_itm_list_in_canon_set(go);
 	if (in_canon != NULL) {
-		/* if found, set the itml goto_rule for this
-		 * nonterm to the existing itm_list in canon_set.
+		/* if go is already in canon_set, set the itml
+		 * goto_rule for this nonterm to the existing
+		 * itm_list in canon_set.
 		 */
 		struct goto_nt_rule_entry *gntre;
 		LOOK_UP(gntre, sym->nt_name, itml->gt_nt_rs);
