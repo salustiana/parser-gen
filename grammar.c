@@ -12,6 +12,14 @@ const char *curr_head;
 const char *start_sym;
 
 struct symbol *curr_sym, es_sym = {1,EMPTY_STR,NULL}, eoi_sym = {1,EOI,NULL};
+struct symbol *make_symbol(int is_term, enum tk_type term_type,
+					const char *nt_name) {
+	struct symbol *s = malloc(sizeof(struct symbol));
+	s->is_term = is_term;
+	s->term_type = term_type;
+	s->nt_name = nt_name;
+	return s;
+}
 
 struct sym_list *curr_prod, *nts_in_grammar, *first_of_term[TK_TYPE_COUNT];
 
@@ -57,7 +65,7 @@ int term_in_grammar[TK_TYPE_COUNT];
 void init_grammar()
 {
 	curr_head = start_sym = NULL;
-	curr_sym = malloc(sizeof(struct symbol));
+	curr_sym = make_symbol(0, 0, NULL);
 	es_sym = (struct symbol) {1, EMPTY_STR, NULL};
 	curr_prod = nts_in_grammar = NULL;
 	for (size_t i = 0; i < TK_TYPE_COUNT; i++) {
@@ -324,14 +332,14 @@ void add_prod()
 void add_sym()
 {
 	/* add to curr_prod */
-	struct sym_list *new_sym = malloc(sizeof(struct sym_list));
-	new_sym->sym = curr_sym;
-	ADD_LINK(new_sym, curr_prod);
+	struct sym_list *nslnk = malloc(sizeof(struct sym_list));
+	nslnk->sym = curr_sym;
+	ADD_LINK(nslnk, curr_prod);
 
 	if (curr_sym->is_term)
 		term_in_grammar[curr_sym->term_type] = 1;
 
-	curr_sym = malloc(sizeof(struct symbol));
+	curr_sym = make_symbol(0, 0, NULL);
 }
 
 void parse_prods()
@@ -418,18 +426,16 @@ void augment_grammar()
 
 void fill_first_of_term_tab()
 {
-	for (size_t i = 0; i < TK_TYPE_COUNT; i++) {
-		if (!term_in_grammar[i]) {
-			first_of_term[i] = NULL;
+	for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
+		if (!term_in_grammar[tt]) {
+			first_of_term[tt] = NULL;
 			continue;
 		}
-		struct symbol *t = malloc(sizeof(struct symbol));
-		t->is_term = 1;
-		t->term_type = (enum tk_type) i;
+		struct symbol *t = make_symbol(1, tt, NULL);
 		struct sym_list *sl = malloc(sizeof(struct sym_list));
 		sl->next = NULL;
 		sl->sym = t;
-		first_of_term[i] = sl;
+		first_of_term[tt] = sl;
 	}
 }
 
@@ -523,9 +529,7 @@ void fill_nts_in_grammar_list()
 			continue;
 		struct prod_head_entry *phe = productions[i];
 		for (; phe != NULL; phe = phe->next) {
-			struct symbol *nt = malloc(sizeof(struct symbol));
-			nt->is_term = 0;
-			nt->nt_name = phe->key;
+			struct symbol *nt = make_symbol(0, 0, phe->key);
 			struct sym_list *ntl = malloc(sizeof(struct sym_list));
 			ntl->sym = nt;
 
@@ -894,9 +898,7 @@ void compute_canon_set()
 		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
 			if (!term_in_grammar[tt])
 				continue;
-			struct symbol *sym = malloc(sizeof(struct symbol));
-			sym->is_term = 1;
-			sym->term_type = tt;
+			struct symbol *sym = make_symbol(1, tt, NULL);
 			if (add_goto_to_canon_set(canon->il, sym))
 				added_to_canon = 1;
 		}
