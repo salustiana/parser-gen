@@ -4,48 +4,29 @@
 #include <string.h>
 #include <unistd.h>
 
-struct symbol *_sym;
-
 void test_sym_in_sym_list()
 {
 	struct symbol *s;
-	struct sym_list *sl;
 	struct sym_list *list = NULL;
 
-	s = malloc(sizeof(struct symbol));
-	s->is_term = 1;
-	s->term_type = TK_INT;
-	sl = malloc(sizeof(struct sym_list));
-	sl->sym = s;
+	s = make_symbol(1, TK_INT, NULL);
 	assert(!sym_in_sym_list(s, list));
-	ADD_LINK(sl, list);
+	add_sym_to_list(s, &list);
 	assert(sym_in_sym_list(s, list));
 
-	s = malloc(sizeof(struct symbol));
-	s->is_term = 1;
-	s->term_type = TK_GRT;
-	sl = malloc(sizeof(struct sym_list));
-	sl->sym = s;
+	s = make_symbol(1, TK_GRT, NULL);
 	assert(!sym_in_sym_list(s, list));
-	ADD_LINK(sl, list);
+	add_sym_to_list(s, &list);
 	assert(sym_in_sym_list(s, list));
 
-	s = malloc(sizeof(struct symbol));
-	s->is_term = 0;
-	s->nt_name = "nt1";
-	sl = malloc(sizeof(struct sym_list));
-	sl->sym = s;
+	s = make_symbol(0, 0, "nt1");
 	assert(!sym_in_sym_list(s, list));
-	ADD_LINK(sl, list);
+	add_sym_to_list(s, &list);
 	assert(sym_in_sym_list(s, list));
 
-	s = malloc(sizeof(struct symbol));
-	s->is_term = 0;
-	s->nt_name = "nt2";
-	sl = malloc(sizeof(struct sym_list));
-	sl->sym = s;
+	s = make_symbol(0, 0, "nt2");
 	assert(!sym_in_sym_list(s, list));
-	ADD_LINK(sl, list);
+	add_sym_to_list(s, &list);
 	assert(sym_in_sym_list(s, list));
 
 	printf("%s passed\n", __func__);
@@ -53,18 +34,16 @@ void test_sym_in_sym_list()
 
 void test_repr_sym()
 {
-	_sym = malloc(sizeof(struct symbol));
-	_sym->is_term = 1;
-	_sym->term_type = TK_LBRCE;
-	assert(strcmp(repr_sym(_sym), "`{`") == 0);
+	struct symbol *s = make_symbol(1, TK_LBRCE, NULL);
+	assert(strcmp(repr_sym(s), "`{`") == 0);
 
-	_sym->is_term = 1;
-	_sym->term_type = TK_ID;
-	assert(strcmp(repr_sym(_sym), "`TK_ID`") == 0);
+	s->is_term = 1;
+	s->term_type = TK_ID;
+	assert(strcmp(repr_sym(s), "`TK_ID`") == 0);
 
-	_sym->is_term = 0;
-	_sym->nt_name = "nonterm";
-	assert(strcmp(repr_sym(_sym), "nonterm") == 0);
+	s->is_term = 0;
+	s->nt_name = "nonterm";
+	assert(strcmp(repr_sym(s), "nonterm") == 0);
 
 	printf("%s passed\n", __func__);
 }
@@ -72,9 +51,6 @@ void test_repr_sym()
 void test_add_sym()
 {
 	init_grammar();
-	curr_prod = malloc(sizeof(struct sym_list));
-	curr_prod->next = NULL;
-	curr_prod->sym = NULL;
 
 	curr_sym->is_term = 0;
 	curr_sym->nt_name = "nt1";
@@ -304,9 +280,7 @@ void test_fill_nts_in_grammar_list()
 	assert(nts_in_grammar == NULL);
 	fill_nts_in_grammar_list();
 	assert(nts_in_grammar != NULL);
-	struct symbol *s = malloc(sizeof(struct symbol));
-	s->is_term = 0;
-	s->nt_name = "head";
+	struct symbol *s = make_symbol(0, 0, "head");
 	assert(sym_in_sym_list(s, nts_in_grammar));
 
 	printf("%s passed\n", __func__);
@@ -370,31 +344,22 @@ void test_first_of_sym_list()
 	init_grammar();
 	parse_bn();
 
-	struct sym_list *sl1, *sl2, *sl3;
-	sl1 = malloc(sizeof(struct sym_list));
-	sl1->next = sl2 = malloc(sizeof(struct sym_list));
-	sl1->next->next = sl2->next = sl3 = malloc(sizeof(struct sym_list));
-	sl3->next = NULL;
-	sl1->sym = malloc(sizeof(struct symbol));
-	sl2->sym = malloc(sizeof(struct symbol));
-	sl3->sym = malloc(sizeof(struct symbol));
 
 	/* first_of_sym_list("expr"->"fact"->TK_RPAR) == { `(`, `TK_ID` } */
-	sl1->sym->is_term = 0;
-	sl2->sym->is_term = 0;
-	sl3->sym->is_term = 1;
-	sl1->sym->nt_name = "expr";
-	sl2->sym->nt_name = "fact";
-	sl3->sym->term_type = TK_RPAR;
 
-	struct symbol *s = malloc(sizeof(struct symbol));
-	struct sym_list *fosl = first_of_sym_list(sl1);
+	struct sym_list *sl = NULL;
+	struct symbol *s = make_symbol(1, TK_RPAR, NULL);
+	add_sym_to_list(s, &sl);
+	s = make_symbol(0, 0, "fact");
+	add_sym_to_list(s, &sl);
+	s = make_symbol(0, 0, "expr");
+	add_sym_to_list(s, &sl);
+	struct sym_list *fosl = first_of_sym_list(sl);
 	assert(fosl != NULL);
 	assert(fosl->next != NULL);
 	assert(fosl->next->next == NULL);
 
-	s->is_term = 1;
-	s->term_type = TK_LPAR;
+	s = make_symbol(1, TK_LPAR, NULL);
 	assert(sym_in_sym_list(s, fosl));
 
 	s->term_type = TK_ID;
@@ -407,13 +372,11 @@ void test_first_of_sym_list()
 	assert(!sym_in_sym_list(s, fosl));
 
 	/* first_of_sym_list(TK_RPAR->"expr") == { `)` } */
-	sl1->sym->is_term = 1;
-	sl2->sym->is_term = 0;
-	sl1->sym->term_type = TK_RPAR;
-	sl2->sym->nt_name = "fact";
-	sl2->next = NULL;
-
-	fosl = first_of_sym_list(sl1);
+	s = make_symbol(0, 0, "expr");
+	add_sym_to_list(s, &sl);
+	s = make_symbol(1, TK_RPAR, "fact");
+	add_sym_to_list(s, &sl);
+	fosl = first_of_sym_list(sl);
 	assert(fosl != NULL);
 	assert(fosl->next == NULL);
 
@@ -600,86 +563,83 @@ void test_print_item()
 
 void test_itm_in_itm_list()
 {
-	curr_prod = NULL;
-	curr_sym->is_term = 0;
-	curr_sym->nt_name = "nt1";
-	add_sym();
+	/* item list = it1->it2->it3->NULL
+	 * it1:
+	 * 	head="head1",
+	 * 	body=nt1->TK_CMPL->nt2->NULL,
+	 * 	dot=nt2->NULL
+	 * it2:
+	 * 	head="head2",
+	 * 	body=nt1->TK_LESS->nt2->NULL,
+	 * 	dot=nt2->NULL
+	 * it3:
+	 * 	head="head3",
+	 * 	body=nt1->TK_GRT->nt2->NULL,
+	 * 	dot=nt2->NULL
+	 */
+	struct item *it1, *it2, *it3;
+	struct sym_list *b = NULL;
+	struct sym_list *d;
+	struct symbol *s;
+	s = make_symbol(0, 0, "nt2");
+	add_sym_to_list(s, &b);
+	s = make_symbol(1, TK_CMPL, NULL);
+	add_sym_to_list(s, &b);
+	s = make_symbol(0, 0, "nt1");
+	add_sym_to_list(s, &b);
+	d = b->next->next;
+	it1 = make_item("head1", b, d);
 
-	curr_sym->is_term = 1;
-	curr_sym->term_type = TK_CMPL;
-	add_sym();
+	b = d = NULL;
+	s = make_symbol(0, 0, "nt2");
+	add_sym_to_list(s, &b);
+	add_sym_to_list(s, &d);
+	s = make_symbol(1, TK_LESS, NULL);
+	add_sym_to_list(s, &b);
+	s = make_symbol(0, 0, "nt1");
+	add_sym_to_list(s, &b);
+	it2 = make_item("head2", b, d);
 
-	curr_sym->is_term = 0;
-	curr_sym->nt_name = "nt2";
-	add_sym();
+	b = d = NULL;
+	s = make_symbol(0, 0, "nt2");
+	add_sym_to_list(s, &b);
+	add_sym_to_list(s, &d);
+	s = make_symbol(1, TK_GRT, NULL);
+	add_sym_to_list(s, &b);
+	s = make_symbol(0, 0, "nt1");
+	add_sym_to_list(s, &b);
+	it3 = make_item("head3", b, d);
 
-	struct item it1 = {"head1", curr_prod, curr_prod->next->next};
+	struct itm_list *il = NULL;
+	add_itm_to_list(it1, &il);
+	add_itm_to_list(it2, &il);
+	add_itm_to_list(it3, &il);
 
-	curr_prod = NULL;
-	curr_sym->is_term = 0;
-	curr_sym->nt_name = "nt1";
-	add_sym();
+	assert(itm_in_itm_list(it1, il));
+	assert(itm_in_itm_list(it2, il));
+	assert(itm_in_itm_list(it3, il));
 
-	curr_sym->is_term = 1;
-	curr_sym->term_type = TK_LESS;
-	add_sym();
+	struct item *it4 = make_item("head4", it1->body, it1->dot);
+	assert(!itm_in_itm_list(it4, il));
 
-	curr_sym->is_term = 0;
-	curr_sym->nt_name = "nt2";
-	add_sym();
-	struct item it2 = {"head2", curr_prod, curr_prod->next->next};
+	struct item *it;
+	it = make_item("head1", it1->body, it1->body->next);
+	assert(!itm_in_itm_list(it, il));
 
-	curr_prod = NULL;
-	curr_sym->is_term = 0;
-	curr_sym->nt_name = "nt1";
-	add_sym();
+	it = make_item("head1", it1->body, it1->body);
+	assert(!itm_in_itm_list(it, il));
 
-	curr_sym->is_term = 1;
-	curr_sym->term_type = TK_GRT;
-	add_sym();
+	it = make_item("head1", it1->dot, it1->body);
+	assert(!itm_in_itm_list(it, il));
 
-	curr_sym->is_term = 0;
-	curr_sym->nt_name = "nt2";
-	add_sym();
-	struct item it3 = {"head3", curr_prod, curr_prod->next->next};
+	it = make_item("head1", NULL, it1->body);
+	assert(!itm_in_itm_list(it, il));
 
-	struct itm_list *ilnk1, *ilnk2, *ilnk3;
-	ilnk1 = malloc(sizeof(struct itm_list));
-	ilnk2 = malloc(sizeof(struct itm_list));
-	ilnk3 = malloc(sizeof(struct itm_list));
+	it = make_item("head1", it1->body, it1->dot);
+	assert(itm_in_itm_list(it, il));
 
-	ilnk1->next = ilnk2;
-	ilnk2->next = ilnk3;
-	ilnk3->next = NULL;
-
-	ilnk1->itm = &it1;
-	ilnk2->itm = &it2;
-	ilnk3->itm = &it3;
-
-	assert(itm_in_itm_list(&it1, ilnk1));
-	assert(itm_in_itm_list(&it2, ilnk1));
-	assert(itm_in_itm_list(&it3, ilnk1));
-
-	struct item it = {"head4", it1.body, it1.dot};
-	assert(!itm_in_itm_list(&it, ilnk1));
-
-	it = (struct item) {"head1", it1.body, it1.body->next};
-	assert(!itm_in_itm_list(&it, ilnk1));
-
-	it = (struct item) {"head1", it1.body, it1.body};
-	assert(!itm_in_itm_list(&it, ilnk1));
-
-	it = (struct item) {"head1", it1.dot, it1.body};
-	assert(!itm_in_itm_list(&it, ilnk1));
-
-	it = (struct item) {"head1", NULL, it1.body};
-	assert(!itm_in_itm_list(&it, ilnk1));
-
-	it = (struct item) {"head1", it1.body, it1.dot};
-	assert(itm_in_itm_list(&it, ilnk1));
-
-	it = (struct item) {"head1", it1.body, it1.body->next->next};
-	assert(itm_in_itm_list(&it, ilnk1));
+	it = make_item("head1", it1->body, it1->body->next->next);
+	assert(itm_in_itm_list(it, il));
 
 	printf("%s passed\n", __func__);
 }
@@ -691,15 +651,12 @@ void test_closure()
 	parse_bn();
 
 	/* check closure of [ E' -> .E ] */
-	struct item *si = malloc(sizeof(struct item));
-	si->head = "expr_s";
 	struct prod_head_entry *phe;
 	LOOK_UP(phe, "expr_s", productions);
-	si->body = phe->prods->prod;
-	si->dot = phe->prods->prod;
-	struct itm_list *sil = malloc(sizeof(struct itm_list));
-	sil->itm = si;
-	sil->next = NULL;
+	struct item *si;
+	si = make_item("expr_s", phe->prods->prod, phe->prods->prod);
+	struct itm_list *sil = NULL;
+	add_itm_to_list(si, &sil);
 
 	struct itm_list *c = closure(sil);
 
@@ -761,41 +718,27 @@ void test_find_itm_list_in_canon_set()
 {
 	canon_set = NULL;
 	/* add { [ E' -> E. ], [ E -> E .+ T ] } to canon_set */
-	struct item *it1 = malloc(sizeof(struct item));
-	it1->head = "expr_s";
 	struct prod_head_entry *phe;
 	LOOK_UP(phe, "expr_s", productions);
-	it1->body = phe->prods->prod;
-	it1->dot = phe->prods->prod->next;
+	struct item *it1;
+	it1 = make_item("expr_s", phe->prods->prod,
+				phe->prods->prod->next);
 
-	struct item *it2 = malloc(sizeof(struct item));
-	it2->head = "expr";
-	it2->body = malloc(sizeof(struct sym_list));
-	it2->body->sym = malloc(sizeof(struct symbol));
-	it2->body->next = malloc(sizeof(struct sym_list));
-	it2->body->next->sym = malloc(sizeof(struct symbol));
-	it2->body->next->next = malloc(sizeof(struct sym_list));
-	it2->body->next->next->sym = malloc(sizeof(struct symbol));
-	it2->body->sym->is_term = 0;
-	it2->body->sym->nt_name = "expr";
-	it2->body->next->sym->is_term = 1;
-	it2->body->next->sym->term_type = TK_PLUS;
-	it2->body->next->next->sym->is_term = 0;
-	it2->body->next->next->sym->nt_name = "term";
+	struct item *it2 = make_item("expr", NULL, NULL);
+	add_sym_to_list(make_symbol(0, 0, "term"), &it2->body);
+	add_sym_to_list(make_symbol(1, TK_PLUS, NULL), &it2->body);
+	add_sym_to_list(make_symbol(0, 0, "expr"), &it2->body);
 	it2->dot = it2->body->next;
 
-	struct itm_list *itl1 = malloc(sizeof(struct itm_list));
-	struct itm_list *itl2 = malloc(sizeof(struct itm_list));
-	itl1->next = itl2;
-	itl1->itm = it1;
-	itl2->itm = it2;
-	itl2->next = NULL;
+	struct itm_list *itl = NULL;
+	add_itm_to_list(it2, &itl);
+	add_itm_to_list(it1, &itl);
 
 	struct itm_list_list *itllnk = malloc(sizeof(struct itm_list_list));
-	itllnk->il = itl1;
+	itllnk->il = itl;
 	ADD_LINK(itllnk, canon_set);
 
-	assert(find_itm_list_in_canon_set(itl1) == itl1);
+	assert(find_itm_list_in_canon_set(itl) == itl);
 
 	printf("%s passed\n", __func__);
 }
@@ -807,37 +750,23 @@ void test_go_to()
 	parse_bn();
 
 	/* check goto of {[ E' -> E. ], [ E -> E .+ T ] } */
-	struct item *it1 = malloc(sizeof(struct item));
-	it1->head = "expr_s";
 	struct prod_head_entry *phe;
 	LOOK_UP(phe, "expr_s", productions);
-	it1->body = phe->prods->prod;
-	it1->dot = phe->prods->prod->next;
+	struct item *it1;
+	it1 = make_item("expr_s", phe->prods->prod,
+				phe->prods->prod->next);
 
-	struct item *it2 = malloc(sizeof(struct item));
-	it2->head = "expr";
-	it2->body = malloc(sizeof(struct sym_list));
-	it2->body->sym = malloc(sizeof(struct symbol));
-	it2->body->next = malloc(sizeof(struct sym_list));
-	it2->body->next->sym = malloc(sizeof(struct symbol));
-	it2->body->next->next = malloc(sizeof(struct sym_list));
-	it2->body->next->next->sym = malloc(sizeof(struct symbol));
-	it2->body->sym->is_term = 0;
-	it2->body->sym->nt_name = "expr";
-	it2->body->next->sym->is_term = 1;
-	it2->body->next->sym->term_type = TK_PLUS;
-	it2->body->next->next->sym->is_term = 0;
-	it2->body->next->next->sym->nt_name = "term";
+	struct item *it2 = make_item("expr", NULL, NULL);
+	add_sym_to_list(make_symbol(0, 0, "term"), &it2->body);
+	add_sym_to_list(make_symbol(1, TK_PLUS, NULL), &it2->body);
+	add_sym_to_list(make_symbol(0, 0, "expr"), &it2->body);
 	it2->dot = it2->body->next;
 
-	struct itm_list *itl1 = malloc(sizeof(struct itm_list));
-	struct itm_list *itl2 = malloc(sizeof(struct itm_list));
-	itl1->next = itl2;
-	itl1->itm = it1;
-	itl2->itm = it2;
-	itl2->next = NULL;
+	struct itm_list *itl = NULL;
+	add_itm_to_list(it2, &itl);
+	add_itm_to_list(it1, &itl);
 
-	struct itm_list *go = go_to(itl1, it2->dot->sym);
+	struct itm_list *go = go_to(itl, it2->dot->sym);
 	printf("GOTO({ ");
 	print_item(it1);
 	printf(", ");
