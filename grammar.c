@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 
+// TODO: do not exceed 80 cols
+
 struct token tk;
 const char *curr_head;
 const char *start_sym;
@@ -61,7 +63,8 @@ struct itm_list {
 	struct item *itm;
 	struct goto_nt_rule_entry *gt_nt_rs[HASHSIZE];
 	struct itm_list *gt_term_rs[TK_TYPE_COUNT];
-};
+} **canon_coll;
+size_t canon_coll_n;
 
 struct itm_list *add_itm_to_list(struct item *itm, struct itm_list **il) {
 	struct itm_list *ilnk = malloc(sizeof(struct itm_list));
@@ -76,6 +79,7 @@ struct itm_list_list {
 } *canon_set;
 
 struct prod_head_entry *productions[HASHSIZE];
+int term_in_grammar[TK_TYPE_COUNT];
 
 struct sym_list_entry {
 	struct sym_list_entry *next;
@@ -83,7 +87,13 @@ struct sym_list_entry {
 	struct sym_list *sl;
 } *first_of_nt[HASHSIZE], *follow_tab[HASHSIZE];
 
-int term_in_grammar[TK_TYPE_COUNT];
+struct action_entry {
+	int accept;
+	int error;
+	struct itm_list *shift_to;
+	const char *reduce_to;
+	struct sym_list *reduce_from;
+} ***action_tab;
 
 void init_grammar()
 {
@@ -298,6 +308,39 @@ void print_canon_set()
 		printf("GOTO RULES FOR I%zu:\n", i);
 		print_itm_list_goto_rules(c->il);
 		putchar('\n');
+	}
+}
+
+void print_action_tab()
+{
+	for (size_t i = 0; i < canon_coll_n; i++) {
+		printf("ACTION(%p)\n", (void *) canon_coll[i]);
+		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
+			if (!term_in_grammar[tt] && tt != EOI)
+				continue;
+			printf("\t%d: ", tt);
+			if (action_tab[i][tt]->accept) {
+				printf("acc\n");
+				continue;
+			}
+			if (action_tab[i][tt]->error) {
+				printf("err\n");
+				continue;
+			}
+			struct itm_list *sto = action_tab[i][tt]->shift_to;
+			if (sto != NULL) {
+				printf("s: %p\n", (void *) sto);
+				continue;
+			}
+			struct sym_list *rf = action_tab[i][tt]->reduce_from;
+			if (rf != NULL) {
+				printf("r: %s -> ",
+						action_tab[i][tt]->reduce_to);
+				print_sym_list(rf);
+				putchar('\n');
+				continue;
+			}
+		}
 	}
 }
 
@@ -894,6 +937,106 @@ void compute_canon_set()
 	}
 }
 
+void compute_canon_coll()
+{
+	canon_coll_n = 0;
+	struct itm_list_list *c = canon_set;
+	while (c != NULL) {
+		++canon_coll_n;
+		c = c->next;
+	}
+
+	canon_coll = malloc(sizeof(struct itm_list) * canon_coll_n);
+	c = canon_set;
+	for (size_t i = 0; i < canon_coll_n; i++) {
+		canon_coll[i] = c->il;
+		c = c->next;
+	}
+	assert(c == NULL);
+}
+
+void compute_action_tab()
+{
+	void *null_entry = malloc(sizeof(struct action_entry));
+	memset(null_entry, 0, sizeof(struct action_entry));
+
+	action_tab = malloc(canon_coll_n * sizeof(struct action_entry **));
+	for (size_t i = 0; i < canon_coll_n; i++) {
+		/* allocate space for entries in action_tab[i]
+		 * and initialize them to 0.
+		 */
+		action_tab[i] = malloc(TK_TYPE_COUNT *
+				sizeof(struct action_entry *));
+		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
+			action_tab[i][tt] = malloc(sizeof(struct action_entry));
+			memset(action_tab[i][tt],0,sizeof(struct action_entry));
+		}
+
+		struct itm_list *curr_it = canon_coll[i];
+		for (; curr_it != NULL; curr_it = curr_it->next) {
+			struct item *citm = curr_it->itm;
+			/* If [S' -> S.] is in canon_coll[i], then set
+			 * action_tab[i][$] to accept. Otherwise,
+			 * if [A -> x.] is in canon_coll[i], then set
+			 * action_tab[i][a] to reduce A -> x for all
+			 * terminals a in follow_tab[A].
+			 */
+			if (citm->dot == NULL) {
+				if (strcmp(citm->head, start_sym) == 0) {
+					action_tab[i][EOI]->accept = 1;
+					continue;
+				}
+				const char *rt = citm->head;
+				struct sym_list *rf = citm->body;
+				struct sym_list_entry *foh;
+				LOOK_UP(foh, citm->head, follow_tab);
+				struct sym_list *fsl = foh->sl;
+				for (; fsl != NULL; fsl = fsl->next) {
+					assert(fsl->sym->is_term);
+					enum tk_type tt = fsl->sym->term_type;
+					if (memcmp(action_tab[i][tt], null_entry, sizeof(struct action_entry)) == 0) {
+						action_tab[i][tt]->reduce_to = rt;
+						action_tab[i][tt]->reduce_from = rf;
+						continue;
+					}
+					/* check for shift-reduce conflicts */
+					assert(action_tab[i][tt]->accept == 0);
+					assert(action_tab[i][tt]->error == 0);
+					assert(action_tab[i][tt]->shift_to == NULL);
+					assert(action_tab[i][tt]->reduce_to == rt);
+					assert(action_tab[i][tt]->reduce_from == rf);
+				}
+				continue;
+			}
+			/* if [A -> x.a.y] is in canon_coll[i], and
+			 * canon_coll[i]->gt_term_rs[a] is canon_coll[j],
+			 * then set action_tab[i][a] to shift_to canon_coll[j].
+			 */
+			if (!citm->dot->sym->is_term)
+				continue;
+			enum tk_type tt = citm->dot->sym->term_type;
+			struct itm_list *sto = canon_coll[i]->gt_term_rs[tt];
+			if (memcmp(action_tab[i][tt], null_entry, sizeof(struct action_entry)) == 0) {
+				action_tab[i][tt]->shift_to = sto;
+				continue;
+			}
+			/* check for shift-reduce conflicts */
+			assert(action_tab[i][tt]->shift_to == sto);
+			assert(action_tab[i][tt]->accept == 0);
+			assert(action_tab[i][tt]->error == 0);
+			assert(action_tab[i][tt]->reduce_to == NULL);
+			assert(action_tab[i][tt]->reduce_from == NULL);
+		}
+
+		/* set all remaining entries to error */
+		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
+			if (memcmp(action_tab[i][tt], null_entry,
+					sizeof(struct action_entry)) == 0)
+				action_tab[i][tt]->error = 1;
+		}
+	}
+}
+
 void parse_bn()
 {
 	init_grammar();
@@ -914,4 +1057,6 @@ void parse_bn()
 	compute_first_tab();
 	compute_follow_tab();
 	compute_canon_set();
+	compute_canon_coll();
+	compute_action_tab();
 }

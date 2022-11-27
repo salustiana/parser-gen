@@ -796,6 +796,17 @@ void test_compute_canon_set()
 	printf("%s: check output above\n", __func__);
 }
 
+void test_compute_action_tab()
+{
+	init_lexer("./tests/reduced_arith_expr.bn");
+	init_grammar();
+	parse_bn();
+
+	print_action_tab();
+
+	printf("%s: check output above\n", __func__);
+}
+
 void test_grammar()
 {
 	test_sym_in_sym_list();
@@ -815,4 +826,5 @@ void test_grammar()
 	test_find_itm_list_in_canon_set();
 	test_go_to();
 	test_compute_canon_set();
+	test_compute_action_tab();
 }
