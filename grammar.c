@@ -85,9 +85,13 @@ struct sym_list_entry {
 	struct sym_list *sl;
 } *first_of_nt[HASHSIZE], *follow_tab[HASHSIZE];
 
+enum act_type {
+	ACT_UNSET = 0,
+	ACT_ACC,	ACT_ERR,
+	ACT_SHFT,	ACT_RED,
+};
 struct action_entry {
-	int accept;
-	int error;
+	enum act_type type;
 	struct itm_list *shift_to;
 	const char *reduce_to;
 	struct sym_list *reduce_from;
@@ -317,26 +321,25 @@ void print_action_tab()
 			if (!term_in_grammar[tt] && tt != EOI)
 				continue;
 			printf("\t%d: ", tt);
-			if (action_tab[i][tt]->accept) {
+			switch (action_tab[i][tt]->type) {
+			case ACT_ACC:
 				printf("acc\n");
-				continue;
-			}
-			if (action_tab[i][tt]->error) {
+				break;
+			case ACT_ERR:
 				printf("err\n");
-				continue;
-			}
-			struct itm_list *sto = action_tab[i][tt]->shift_to;
-			if (sto != NULL) {
-				printf("s: %p\n", (void *) sto);
-				continue;
-			}
-			struct sym_list *rf = action_tab[i][tt]->reduce_from;
-			if (rf != NULL) {
+				break;
+			case ACT_SHFT:
+				printf("s: %p\n", (void *)
+						action_tab[i][tt]->shift_to);
+				break;
+			case ACT_RED:
 				printf("r: %s -> ",
 						action_tab[i][tt]->reduce_to);
-				print_sym_list(rf);
+				print_sym_list(action_tab[i][tt]->reduce_from);
 				putchar('\n');
-				continue;
+				break;
+			default:
+				panic("action not set for state %zu\n", i);
 			}
 		}
 	}
@@ -978,7 +981,7 @@ void compute_action_tab()
 			 */
 			if (citm->dot == NULL) {
 				if (strcmp(citm->head, start_sym) == 0) {
-					action_tab[i][EOI]->accept = 1;
+					action_tab[i][EOI]->type = ACT_ACC;
 					continue;
 				}
 				const char *rt = citm->head;
@@ -991,16 +994,14 @@ void compute_action_tab()
 					enum tk_type tt = fsl->sym->term_type;
 					struct action_entry *act;
 					act = action_tab[i][tt];
-					if (is_mem_null(act,
-						sizeof(struct action_entry))) {
+					if (act->type == ACT_UNSET) {
+						act->type = ACT_RED;
 						act->reduce_to = rt;
 						act->reduce_from = rf;
 						continue;
 					}
 					/* check for shift-reduce conflicts */
-					assert(act->accept == 0);
-					assert(act->error == 0);
-					assert(act->shift_to == NULL);
+					assert(act->type == ACT_RED);
 					assert(act->reduce_to == rt);
 					assert(act->reduce_from == rf);
 				}
@@ -1014,24 +1015,20 @@ void compute_action_tab()
 				continue;
 			enum tk_type tt = citm->dot->sym->term_type;
 			struct itm_list *sto = canon_coll[i]->gt_term_rs[tt];
-			if (is_mem_null(action_tab[i][tt],
-					sizeof(struct action_entry))) {
+			if (action_tab[i][tt]->type == ACT_UNSET) {
+				action_tab[i][tt]->type = ACT_SHFT;
 				action_tab[i][tt]->shift_to = sto;
 				continue;
 			}
 			/* check for shift-reduce conflicts */
+			assert(action_tab[i][tt]->type == ACT_SHFT);
 			assert(action_tab[i][tt]->shift_to == sto);
-			assert(action_tab[i][tt]->accept == 0);
-			assert(action_tab[i][tt]->error == 0);
-			assert(action_tab[i][tt]->reduce_to == NULL);
-			assert(action_tab[i][tt]->reduce_from == NULL);
 		}
 
 		/* set all remaining entries to error */
 		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
-			if (is_mem_null(action_tab[i][tt],
-					sizeof(struct action_entry)))
-				action_tab[i][tt]->error = 1;
+			if (action_tab[i][tt]->type == ACT_UNSET)
+				action_tab[i][tt]->type = ACT_ERR;
 		}
 	}
 }
