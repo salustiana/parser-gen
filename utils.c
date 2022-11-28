@@ -5,6 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+int is_mem_null(void *s, size_t n)
+{
+	char null_mem[n];
+	memset(null_mem, 0, n);
+	return memcmp(s, null_mem, n) == 0;
+}
+
 struct link {
 	struct link *next;
 };

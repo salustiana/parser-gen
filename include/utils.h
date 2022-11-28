@@ -1,7 +1,11 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stddef.h>
+
 #define HASHSIZE	101
+
+int is_mem_null(void *s, size_t n);
 
 /*
  * Adds LNK to the start of LIST and

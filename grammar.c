@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// TODO: do not exceed 80 cols
-
 struct token tk;
 const char *curr_head;
 const char *start_sym;
@@ -957,9 +955,6 @@ void compute_canon_coll()
 
 void compute_action_tab()
 {
-	void *null_entry = malloc(sizeof(struct action_entry));
-	memset(null_entry, 0, sizeof(struct action_entry));
-
 	action_tab = malloc(canon_coll_n * sizeof(struct action_entry **));
 	for (size_t i = 0; i < canon_coll_n; i++) {
 		/* allocate space for entries in action_tab[i]
@@ -994,17 +989,20 @@ void compute_action_tab()
 				for (; fsl != NULL; fsl = fsl->next) {
 					assert(fsl->sym->is_term);
 					enum tk_type tt = fsl->sym->term_type;
-					if (memcmp(action_tab[i][tt], null_entry, sizeof(struct action_entry)) == 0) {
-						action_tab[i][tt]->reduce_to = rt;
-						action_tab[i][tt]->reduce_from = rf;
+					struct action_entry *act;
+					act = action_tab[i][tt];
+					if (is_mem_null(act,
+						sizeof(struct action_entry))) {
+						act->reduce_to = rt;
+						act->reduce_from = rf;
 						continue;
 					}
 					/* check for shift-reduce conflicts */
-					assert(action_tab[i][tt]->accept == 0);
-					assert(action_tab[i][tt]->error == 0);
-					assert(action_tab[i][tt]->shift_to == NULL);
-					assert(action_tab[i][tt]->reduce_to == rt);
-					assert(action_tab[i][tt]->reduce_from == rf);
+					assert(act->accept == 0);
+					assert(act->error == 0);
+					assert(act->shift_to == NULL);
+					assert(act->reduce_to == rt);
+					assert(act->reduce_from == rf);
 				}
 				continue;
 			}
@@ -1016,7 +1014,8 @@ void compute_action_tab()
 				continue;
 			enum tk_type tt = citm->dot->sym->term_type;
 			struct itm_list *sto = canon_coll[i]->gt_term_rs[tt];
-			if (memcmp(action_tab[i][tt], null_entry, sizeof(struct action_entry)) == 0) {
+			if (is_mem_null(action_tab[i][tt],
+					sizeof(struct action_entry))) {
 				action_tab[i][tt]->shift_to = sto;
 				continue;
 			}
@@ -1030,8 +1029,8 @@ void compute_action_tab()
 
 		/* set all remaining entries to error */
 		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
-			if (memcmp(action_tab[i][tt], null_entry,
-					sizeof(struct action_entry)) == 0)
+			if (is_mem_null(action_tab[i][tt],
+					sizeof(struct action_entry)))
 				action_tab[i][tt]->error = 1;
 		}
 	}
