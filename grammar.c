@@ -13,7 +13,7 @@ const char *start_sym;
 
 struct symbol *curr_sym, es_sym = {1,EMPTY_STR,NULL}, eoi_sym = {1,EOI,NULL};
 struct symbol *make_symbol(int is_term, enum tk_type term_type,
-					const char *nt_name) {
+						const char *nt_name) {
 	struct symbol *s = malloc(sizeof(struct symbol));
 	s->is_term = is_term;
 	s->term_type = term_type;
@@ -971,9 +971,9 @@ void compute_action_tab()
 		for (; curr_it != NULL; curr_it = curr_it->next) {
 			struct item *citm = curr_it->itm;
 			/* If [S' -> S.] is in canon_coll[i], then set
-			 * action_tab[i][$] to accept. Otherwise,
-			 * if [A -> x.] is in canon_coll[i], then set
-			 * action_tab[i][a] to reduce A -> x for all
+			 * action_tab[i][$] to accept.
+			 * If [A -> x.] is in canon_coll[i] (and A is not S'),
+			 * then set action_tab[i][a] to reduce A -> x for all
 			 * terminals a in follow_tab[A].
 			 */
 			if (citm->dot == NULL) {
