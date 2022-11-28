@@ -92,7 +92,7 @@ enum act_type {
 };
 struct action_entry {
 	enum act_type type;
-	struct itm_list *shift_to;
+	size_t shift_to;
 	const char *reduce_to;
 	struct sym_list *reduce_from;
 } ***action_tab;
@@ -316,7 +316,7 @@ void print_canon_set()
 void print_action_tab()
 {
 	for (size_t i = 0; i < canon_coll_n; i++) {
-		printf("ACTION(%p)\n", (void *) canon_coll[i]);
+		printf("ACTION(%zu)\n", i);
 		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
 			if (!term_in_grammar[tt] && tt != EOI)
 				continue;
@@ -329,8 +329,7 @@ void print_action_tab()
 				printf("err\n");
 				break;
 			case ACT_SHFT:
-				printf("s: %p\n", (void *)
-						action_tab[i][tt]->shift_to);
+				printf("s: %zu\n", action_tab[i][tt]->shift_to);
 				break;
 			case ACT_RED:
 				printf("r: %s -> ",
@@ -947,13 +946,26 @@ void compute_canon_coll()
 		c = c->next;
 	}
 
-	canon_coll = malloc(sizeof(struct itm_list) * canon_coll_n);
+	canon_coll = malloc(sizeof(struct itm_list *) * canon_coll_n);
 	c = canon_set;
 	for (size_t i = 0; i < canon_coll_n; i++) {
 		canon_coll[i] = c->il;
 		c = c->next;
 	}
 	assert(c == NULL);
+}
+
+/* Returns the canon_coll index for an itm_list.
+ * Returns canon_coll_n (out of bounds index)
+ * if the itm_list is not in canon_coll.
+ */
+size_t get_state_index(struct itm_list *il)
+{
+	size_t i;
+	for (i = 0; i < canon_coll_n; i++)
+		if (canon_coll[i] == il)
+			return i;
+	return canon_coll_n;
 }
 
 void compute_action_tab()
@@ -1009,20 +1021,21 @@ void compute_action_tab()
 			}
 			/* if [A -> x.a.y] is in canon_coll[i], and
 			 * canon_coll[i]->gt_term_rs[a] is canon_coll[j],
-			 * then set action_tab[i][a] to shift_to canon_coll[j].
+			 * then set action_tab[i][a] to shift_to j.
 			 */
 			if (!citm->dot->sym->is_term)
 				continue;
 			enum tk_type tt = citm->dot->sym->term_type;
 			struct itm_list *sto = canon_coll[i]->gt_term_rs[tt];
-			if (action_tab[i][tt]->type == ACT_UNSET) {
-				action_tab[i][tt]->type = ACT_SHFT;
-				action_tab[i][tt]->shift_to = sto;
+			struct action_entry *act = action_tab[i][tt];
+			if (act->type == ACT_UNSET) {
+				act->type = ACT_SHFT;
+				act->shift_to = get_state_index(sto);
 				continue;
 			}
 			/* check for shift-reduce conflicts */
-			assert(action_tab[i][tt]->type == ACT_SHFT);
-			assert(action_tab[i][tt]->shift_to == sto);
+			assert(act->type == ACT_SHFT);
+			assert(act->shift_to == get_state_index(sto));
 		}
 
 		/* set all remaining entries to error */
