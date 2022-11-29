@@ -1019,7 +1019,7 @@ void compute_action_tab()
 				}
 				continue;
 			}
-			/* if [A -> x.a.y] is in canon_coll[i], and
+			/* if [A -> x.ay] is in canon_coll[i], and
 			 * canon_coll[i]->gt_term_rs[a] is canon_coll[j],
 			 * then set action_tab[i][a] to shift_to j.
 			 */
