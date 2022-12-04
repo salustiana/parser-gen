@@ -86,8 +86,7 @@ struct sym_list_entry {
 } *first_of_nt[HASHSIZE], *follow_tab[HASHSIZE];
 
 enum act_type {
-	ACT_UNSET = 0,
-	ACT_ACC,	ACT_ERR,
+	ACT_ACC = 1,	ACT_ERR,
 	ACT_SHFT,	ACT_RED,
 };
 struct action_entry {
@@ -1006,7 +1005,7 @@ void compute_action_tab()
 					enum tk_type tt = fsl->sym->term_type;
 					struct action_entry *act;
 					act = action_tab[i][tt];
-					if (act->type == ACT_UNSET) {
+					if (!act->type) {
 						act->type = ACT_RED;
 						act->reduce_to = rt;
 						act->reduce_from = rf;
@@ -1028,7 +1027,7 @@ void compute_action_tab()
 			enum tk_type tt = citm->dot->sym->term_type;
 			struct itm_list *sto = canon_coll[i]->gt_term_rs[tt];
 			struct action_entry *act = action_tab[i][tt];
-			if (act->type == ACT_UNSET) {
+			if (!act->type) {
 				act->type = ACT_SHFT;
 				act->shift_to = get_state_index(sto);
 				continue;
@@ -1040,7 +1039,7 @@ void compute_action_tab()
 
 		/* set all remaining entries to error */
 		for (enum tk_type tt = 0; tt < TK_TYPE_COUNT; tt++) {
-			if (action_tab[i][tt]->type == ACT_UNSET)
+			if (!action_tab[i][tt]->type)
 				action_tab[i][tt]->type = ACT_ERR;
 		}
 	}
