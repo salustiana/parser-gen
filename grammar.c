@@ -474,6 +474,7 @@ void augment_grammar()
 
 	curr_prod = NULL;
 	curr_head = extended_str(start_sym, "_s");
+	// TODO assert that start_sym + "_s" is not an existing symbol in nts_in_grammar
 	struct prod_head_entry *ne = malloc(sizeof(struct prod_head_entry));
 	INSERT_ENTRY(ne, curr_head, productions);
 	ne->prods = NULL;
@@ -693,7 +694,7 @@ void compute_follow_tab()
 					added_to_follow = 1;
 				}
 			}
-			/* if A->xB of (A->xBy and FIRST(y) has EMPTY_STR)
+			/* if A->xB or (A->xBy and FIRST(y) has EMPTY_STR)
 			 * then add FOLLOW(A) to FOLLOW(B).
 			 */
 			if (prod->next == NULL ||
@@ -893,6 +894,7 @@ int add_goto_to_canon_set(struct itm_list *itml, struct symbol *sym)
 	gntre = malloc(sizeof(struct goto_nt_rule_entry));
 	gntre->canon_itm = go;
 	INSERT_ENTRY(gntre, sym->nt_name, itml->gt_nt_rs);
+	// TODO: all unset gt_nt_rs should be set to ACT_ERR
 	return 1;
 }
 
