@@ -28,6 +28,7 @@ canon = list()
 goto_tab = dict()
 action_tab = dict()
 canon_n = 0
+start_state = 0
 
 def repr_sym(sym):
     if sym == TK_ID:
@@ -101,6 +102,24 @@ def print_canon():
             print()
         print()
 
+def print_goto_tab():
+    print("GOTO")
+    for i in range(canon_n):
+        print("\t", i)
+        for nt in symbols:
+            if type(nt) != str or nt == start_sym:
+                continue
+            print("\t\t", nt, "\t", goto_tab[i, nt])
+
+def print_action_tab():
+    print("ACTION")
+    for i in range(canon_n):
+        print("\t", i)
+        for t in symbols:
+            if type(t) != int:
+                continue
+            print("\t\t", repr_sym(t), "\t", action_tab[i, t])
+
 def expected(exp):
     raise Exception(
         f"on token {tk_n} \"{chr(tk.type)}\": "
@@ -117,7 +136,11 @@ def tk_gen():
 tokens = tk_gen()
 def next_token():
     global tk
-    tk = Token(*tokens.__next__())
+    try:
+        tk = Token(*tokens.__next__())
+        return True
+    except StopIteration:
+        return False
 
 def skip_tks(chars):
     for char in chars:
@@ -139,7 +162,7 @@ def add_prod():
 def parse_prods():
     global curr_head
 
-    more_input = 1
+    more_input = True
     while more_input:
         if tk.type == ord('|'):
             add_prod()
@@ -152,10 +175,7 @@ def parse_prods():
             next_token()
             if tk.type != ord('>'):
                 expected(">")
-            try:
-                next_token()
-            except StopIteration:
-                more_input = 0
+            more_input = next_token()
             if tk.type == ord(':'):
                 skip_tks("::=")
                 add_prod()
@@ -168,19 +188,13 @@ def parse_prods():
             next_token()
             if tk.type == ord('`'):
                 add_sym(EMPTY_STR)
-                try:
-                    next_token()
-                except StopIteration:
-                    more_input = 0
+                more_input = next_token()
             else:
                 add_sym(tk.type)
                 next_token()
                 if tk.type != ord('`'):
                     expected("`")
-                try:
-                    next_token()
-                except StopIteration:
-                    more_input = 0
+                more_input = next_token()
         else:
             expected("a valid token")
 
@@ -312,7 +326,7 @@ def goto(items, sym):
     return closure(go)
 
 def compute_canon_and_goto_tab():
-    global canon_n
+    global canon_n, start_state
 
     if canon:
         raise Exception("canon is not empty")
@@ -322,6 +336,7 @@ def compute_canon_and_goto_tab():
     canon.append(
         closure([Item(head=start_sym, body=start_prods[0], dot=0)])
     )
+    start_state = 0
 
     added_to_canon = True
     while added_to_canon:
@@ -406,7 +421,10 @@ if __name__ == "__main__":
     compute_follow_tab()
     compute_canon_and_goto_tab()
     compute_action_tab()
+    print_canon()
+    print_action_tab()
+    print_goto_tab()
 
     import pickle
     with open("slr-tab", "wb") as f:
-        pickle.dump((symbols, start_sym, canon_n, action_tab, goto_tab), f)
+        pickle.dump((start_state, action_tab, goto_tab), f)
