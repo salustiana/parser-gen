@@ -6,6 +6,7 @@ TK_STR = 149
 TK_ID = 150
 EOI = ord('$')
 EMPTY_STR = ord('@')
+NG = ord('`') # a symbol not present in the grammar
 
 SHIFT = 0
 REDUCE = 1
@@ -13,7 +14,8 @@ ACCEPT = 2
 ERROR = -3
 
 Token = namedtuple("Token", ["type", "str_val"])
-Item = namedtuple("Item", ["head", "body", "dot"])
+LR0Item = namedtuple("Item", ["head", "body", "dot"])
+Item = namedtuple("Item", ["head", "body", "dot", "look"])
 
 productions = dict()
 symbols = list()
@@ -25,9 +27,13 @@ curr_prod = list()
 first_tab = dict()
 follow_tab = dict()
 canon = list()
+canon_kerns = list()
+look_tab = dict()
+lalr_set = list()
 goto_tab = dict()
 action_tab = dict()
 canon_n = 0
+start_lr0_item = None
 start_state = 0
 
 def repr_sym(sym):
@@ -42,10 +48,11 @@ def repr_sym(sym):
     try:
         rep = chr(sym)
     except (TypeError, ValueError):
-        rep = "<" + str(sym) + ">"
+        rep = str(sym)
     return rep
 
 def print_grammar():
+    print("GRAMMAR")
     for h, ps in productions.items():
         print("<", h, "> ::= ", sep="", end="")
         first = 1
@@ -66,6 +73,7 @@ def print_symbols():
     print("}")
 
 def print_first_tab():
+    print("FIRST_TAB")
     for sym in symbols:
         if type(sym) == int:
             continue
@@ -75,6 +83,7 @@ def print_first_tab():
         print("}")
 
 def print_follow_tab():
+    print("FOLLOW_TAB")
     for sym in symbols:
         if type(sym) == int:
             continue
@@ -83,18 +92,59 @@ def print_follow_tab():
             print(repr_sym(s), end=", ")
         print("}")
 
-def print_item(it):
-    print(it.head, "-> ", end="")
+def print_lr0_item(it):
+    print("[", it.head, "-> ", end="")
     for i, s in enumerate(it.body):
         if i == it.dot:
             print(".", sep="", end="")
         print(repr_sym(s), end=" ")
     if it.dot == len(it.body):
         print(".", end="")
+    print("]", end="")
+
+def print_item(it):
+    print("[", it.head, "-> ", end="")
+    for i, s in enumerate(it.body):
+        if i == it.dot:
+            print(".", sep="", end="")
+        print(repr_sym(s), end=" ")
+    if it.dot == len(it.body):
+        print(".", end="")
+    print(",", chr(it.look), "]", end="")
 
 
 def print_canon():
+    print("CANON")
     for i, items in enumerate(canon):
+        print(f"I{i}")
+        for it in items:
+            print("\t", end="")
+            print_lr0_item(it)
+            print()
+        print()
+
+def print_canon_kerns():
+    print("CANON_KERNS")
+    for i, items in enumerate(canon_kerns):
+        print(f"I{i}")
+        for it in items:
+            print("\t", end="")
+            print_lr0_item(it)
+            print()
+        print()
+
+def print_look_tab():
+    print("LOOK_TAB")
+    for k, kern in enumerate(canon_kerns):
+        print(k)
+        for i in range(len(kern)):
+            print("\t", end="")
+            print_lr0_item(canon_kerns[k][i])
+            print([chr(lk) for lk in look_tab[k, i]])
+
+def print_lalr_set():
+    print("LALR_SET")
+    for i, items in enumerate(lalr_set):
         print(f"I{i}")
         for it in items:
             print("\t", end="")
@@ -292,9 +342,8 @@ def compute_follow_tab():
                                 follow_tab[sym].append(s)
                                 added_to_follow = True
 
-
-def closure(items):
-    clos = items.copy()
+def lr0_closure(lr0_items):
+    clos = lr0_items.copy()
 
     added_nts = list()
     added_to_clos = True
@@ -310,32 +359,65 @@ def closure(items):
             ):
                 for prod in productions[it.body[it.dot]]:
                     clos.append(
-                        Item(head=it.body[it.dot], body=prod, dot=0)
+                        LR0Item(head=it.body[it.dot], body=prod, dot=0)
                     )
                 added_nts.append(it.body[it.dot])
                 added_to_clos = True
     return clos
 
+def lr0_goto(lr0_items, sym):
+    go = list()
+    for it in lr0_items:
+        if it.dot < len(it.body) and it.body[it.dot] == sym:
+            go.append(
+                LR0Item(head=it.head, body=it.body, dot=it.dot+1)
+            )
+    return lr0_closure(go)
+
+def closure(items):
+    clos = items.copy()
+
+    added_to_clos = True
+    while added_to_clos:
+        added_to_clos = False
+        for it in clos:
+            if it.dot > len(it.body):
+                raise Exception("Item dot is beyond bounds")
+            if it.dot == len(it.body) or type(it.body[it.dot]) != str:
+                continue
+            for prod in productions[it.body[it.dot]]:
+                for t in first_of_string(it.body[it.dot+1:] + [it.look]):
+                    if type(t) != int:
+                        continue
+                    nit = Item(head=it.body[it.dot], body=prod, dot=0, look=t)
+                    if nit in clos:
+                        continue
+                    clos.append(nit)
+                    added_to_clos = True
+    return clos
+
 def goto(items, sym):
     go = list()
     for it in items:
-        if it.dot < len(it.body) and it.body[it.dot] == sym:
-            go.append(
-                Item(head=it.head, body=it.body, dot=it.dot+1)
-            )
+        if it.dot > len(it.body):
+            raise Exception("Item dot is beyond bounds")
+        if it.dot == len(it.body) or it.body[it.dot] != sym:
+            continue
+        go.append(
+            Item(head=it.head, body=it.body, dot=it.dot+1, look=it.look)
+        )
     return closure(go)
 
 def compute_canon_and_goto_tab():
-    global canon_n, start_state
+    global canon_n, start_state, start_lr0_item
 
     if canon:
         raise Exception("canon is not empty")
     start_prods = productions[start_sym]
     if len(start_prods) != 1:
         raise Exception("start_sym has more than one prod")
-    canon.append(
-        closure([Item(head=start_sym, body=start_prods[0], dot=0)])
-    )
+    start_lr0_item = LR0Item(head=start_sym, body=start_prods[0], dot=0)
+    canon.append(lr0_closure([start_lr0_item]))
     start_state = 0
 
     added_to_canon = True
@@ -343,7 +425,7 @@ def compute_canon_and_goto_tab():
         added_to_canon = False
         for i, items in enumerate(canon):
             for sym in symbols:
-                gt = goto(items, sym)
+                gt = lr0_goto(items, sym)
                 if not gt:
                     continue
                 try:
@@ -361,6 +443,97 @@ def compute_canon_and_goto_tab():
                 continue
             if not goto_tab.get((i, nt)):
                 goto_tab[i, nt] = ERROR
+
+def compute_canon_kerns():
+    if canon_kerns:
+        raise Exception("canon_kerns is not empty")
+    for items in canon:
+        canon_kerns.append([
+            it for it in items
+            if not (it.dot == 0 and it.head != start_sym)
+        ])
+
+def determine_lookaheads(kernel, sym):
+    spont_gen = dict()
+    propagate = dict()
+    for i, it in enumerate(kernel):
+        j = closure([Item(head=it.head, body=it.body, dot=it.dot, look=NG)])
+        for im in j:
+            if im.dot == len(im.body) or im.body[im.dot] != sym:
+                continue
+            if im.look == NG:
+                # conclude that lookaheads propagate from it in kernel to im in GOTO(I, sym)
+                if not propagate.get(i):
+                    propagate[i] = list()
+                propagate[i].append(im)
+                continue
+            # conclude that lookahead im.look is generated spontaneously for item im in GOTO(I, sym)
+            if not spont_gen.get(im.look):
+                spont_gen[im.look] = list()
+            spont_gen[im.look].append(im)
+    return spont_gen, propagate
+
+def get_ck_index(item, from_k, from_sym):
+    gt = lr0_goto(canon[from_k], from_sym)
+    if canon.count(gt) < 1:
+        raise Exception(f"GOTO({from_k}, {from_sym}) not found in canon")
+    if canon.count(gt) > 1:
+        raise Exception(f"GOTO({from_k}, {from_sym}) found more than once in canon")
+    k = canon.index(gt)
+
+    item = LR0Item(head=item.head, body=item.body, dot=item.dot+1)
+    if canon_kerns[k].count(item) < 1:
+        raise Exception(f"Item {item} not found in canon_kerns")
+    if canon_kerns[k].count(item) > 1:
+        raise Exception(f"Item {item} found more than once in canon_kerns")
+    i = canon_kerns[k].index(item)
+    return (k, i)
+
+def compute_look_tab():
+    compute_canon_kerns()
+
+    propagate = dict()
+    for k, kern in enumerate(canon_kerns):
+        for i in range(len(kern)):
+            look_tab[k, i] = list()
+            propagate[k, i] = list()
+    look_tab[
+        start_state, canon_kerns[start_state].index(start_lr0_item)
+    ].append(EOI)
+
+    for k, kern in enumerate(canon_kerns):
+        for sym in symbols:
+            sp_gen, prop = determine_lookaheads(kern, sym)
+            for lk, items in sp_gen.items():
+                for it in items:
+                    look_tab[get_ck_index(it, k, sym)].append(lk)
+            for from_i, tos in prop.items():
+                propagate[k, from_i] += [get_ck_index(to, k, sym) for to in tos]
+
+    added_to_look = True
+    while added_to_look:
+        added_to_look = False
+        for k, kern in enumerate(canon_kerns):
+            for i in range(len(kern)):
+                for to_i in propagate[k, i]:
+                    for lk in look_tab[k, i]:
+                        if lk not in look_tab[to_i]:
+                            look_tab[to_i].append(lk)
+                            added_to_look = True
+
+def compute_lalr_set():
+    if lalr_set:
+        raise Exception("lalr_set is not empty")
+    for k, kern in enumerate(canon_kerns):
+        if len(lalr_set) != k:
+            raise Exception("index mismatch while computing lalr_set")
+        lalr_kern = list()
+        for i, it in enumerate(kern):
+            for lk in look_tab[k, i]:
+                lalr_kern.append(
+                    Item(head=it.head, body=it.body, dot=it.dot, look=lk)
+                )
+        lalr_set.append(closure(lalr_kern))
 
 def compute_action_tab():
     for i, items in enumerate(canon):
@@ -420,11 +593,15 @@ if __name__ == "__main__":
     compute_first_tab()
     compute_follow_tab()
     compute_canon_and_goto_tab()
-    compute_action_tab()
+    #compute_action_tab()
     print_canon()
-    print_action_tab()
-    print_goto_tab()
+    compute_look_tab()
+    print_look_tab()
+    compute_lalr_set()
+    print_lalr_set()
+    #print_action_tab()
+    #print_goto_tab()
 
-    import pickle
-    with open("slr-tab", "wb") as f:
-        pickle.dump((start_state, action_tab, goto_tab), f)
+    #import pickle
+    #with open("slr-tab", "wb") as f:
+        #pickle.dump((start_state, action_tab, goto_tab), f)
