@@ -50,7 +50,7 @@ def parse():
 
 if __name__ == "__main__":
     import pickle
-    with open("slr-tab", "rb") as f:
+    with open("lalr-tab", "rb") as f:
         start_state, action_tab, goto_tab = pickle.load(f)
 
     parse()

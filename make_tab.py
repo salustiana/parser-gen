@@ -30,6 +30,7 @@ canon = list()
 canon_kerns = list()
 look_tab = dict()
 lalr_set = list()
+lalr_set_n = 0
 goto_tab = dict()
 action_tab = dict()
 canon_n = 0
@@ -408,7 +409,7 @@ def goto(items, sym):
         )
     return closure(go)
 
-def compute_canon_and_goto_tab():
+def compute_canon():
     global canon_n, start_state, start_lr0_item
 
     if canon:
@@ -423,26 +424,14 @@ def compute_canon_and_goto_tab():
     added_to_canon = True
     while added_to_canon:
         added_to_canon = False
-        for i, items in enumerate(canon):
+        for items in canon:
             for sym in symbols:
                 gt = lr0_goto(items, sym)
-                if not gt:
+                if not gt or gt in canon:
                     continue
-                try:
-                    gti = canon.index(gt)
-                    goto_tab[i, sym] = gti
-                except ValueError:
-                    goto_tab[i, sym] = canon_n
-                    canon.append(gt)
-                    added_to_canon = True
+                canon.append(gt)
+                added_to_canon = True
     canon_n = len(canon)
-
-    for i in range(canon_n):
-        for nt in symbols:
-            if type(nt) != str:
-                continue
-            if not goto_tab.get((i, nt)):
-                goto_tab[i, nt] = ERROR
 
 def compute_canon_kerns():
     if canon_kerns:
@@ -475,18 +464,32 @@ def determine_lookaheads(kernel, sym):
 
 def get_ck_index(item, from_k, from_sym):
     gt = lr0_goto(canon[from_k], from_sym)
-    if canon.count(gt) < 1:
-        raise Exception(f"GOTO({from_k}, {from_sym}) not found in canon")
-    if canon.count(gt) > 1:
-        raise Exception(f"GOTO({from_k}, {from_sym}) found more than once in canon")
-    k = canon.index(gt)
+    k = -1
+    for i, items in enumerate(canon):
+        in_canon = True
+        for it in gt:
+            if it not in items:
+                in_canon = False
+                break
+        if in_canon:
+            if k >= 0:
+                raise Exception("goto found more than once in canon")
+            k = i
+            break
+    if k < 0:
+        raise Exception("goto not found in canon")
 
     item = LR0Item(head=item.head, body=item.body, dot=item.dot+1)
-    if canon_kerns[k].count(item) < 1:
-        raise Exception(f"Item {item} not found in canon_kerns")
-    if canon_kerns[k].count(item) > 1:
-        raise Exception(f"Item {item} found more than once in canon_kerns")
-    i = canon_kerns[k].index(item)
+    i = -1
+    for cki, it in enumerate(canon_kerns[k]):
+        if item == it:
+            if i >= 0:
+                raise Exception(f"item found more than once in canon_kerns")
+            i = cki
+            continue
+    if i < 0:
+        raise Exception(f"item not found in canon_kerns")
+
     return (k, i)
 
 def compute_look_tab():
@@ -497,9 +500,19 @@ def compute_look_tab():
         for i in range(len(kern)):
             look_tab[k, i] = list()
             propagate[k, i] = list()
-    look_tab[
-        start_state, canon_kerns[start_state].index(start_lr0_item)
-    ].append(EOI)
+
+    si_i = -1
+    for i, item in enumerate(canon_kerns[start_state]):
+        if start_lr0_item == item:
+            if si_i >= 0:
+                raise Exception(
+                    "start_lr0_item found more than once " \
+                    "in canon_kerns[start_state]"
+                )
+            si_i = i
+    if si_i < 0:
+        raise Exception("start_lr0_item not found in canon_kerns[start_state]")
+    look_tab[start_state, si_i].append(EOI)
 
     for k, kern in enumerate(canon_kerns):
         for sym in symbols:
@@ -522,10 +535,13 @@ def compute_look_tab():
                             added_to_look = True
 
 def compute_lalr_set():
+    global lalr_set_n
+
     if lalr_set:
         raise Exception("lalr_set is not empty")
+    lalr_set_n = 0
     for k, kern in enumerate(canon_kerns):
-        if len(lalr_set) != k:
+        if lalr_set_n != k:
             raise Exception("index mismatch while computing lalr_set")
         lalr_kern = list()
         for i, it in enumerate(kern):
@@ -534,14 +550,43 @@ def compute_lalr_set():
                     Item(head=it.head, body=it.body, dot=it.dot, look=lk)
                 )
         lalr_set.append(closure(lalr_kern))
+        lalr_set_n += 1
+
+def compute_goto_tab():
+    if goto_tab:
+        raise Exception("goto_tab is not empty")
+    for i, items in enumerate(lalr_set):
+        for sym in symbols:
+            gt = goto(items, sym)
+            if not gt:
+                goto_tab[i, sym] = ERROR
+                continue
+            already_in_lalr = False
+            for _i, _items in enumerate(lalr_set):
+                in_lalr = True
+                for it in gt:
+                    if it not in _items:
+                        in_lalr = False
+                        break
+                if in_lalr:
+                    if already_in_lalr:
+                        raise Exception(
+                            "goto found more than once in lalr_set"
+                        )
+                    goto_tab[i, sym] = _i
+                    already_in_lalr = True
+                    break
+            if already_in_lalr:
+                continue
+            goto_tab[i, sym] = ERROR
 
 def compute_action_tab():
-    for i, items in enumerate(canon):
+    for i, items in enumerate(lalr_set):
         for it in items:
             if it.dot > len(it.body):
                 raise Exception("Item dot is beyond bounds")
-            # if [A -> x.ty] is in CANON[i] and GOTO[i, t] = j, then
-            # set ACTION[i, t] to (SHIFT, j). t is a terminal.
+            # if [A -> x.ty, b] is in LALR_SET[i] and GOTO[i, t] = j, then
+            # set ACTION[i, t] to (SHIFT, j). t and b are terminals.
             if it.dot < len(it.body):
                 t = it.body[it.dot]
                 if type(t) != int:
@@ -552,21 +597,20 @@ def compute_action_tab():
                     raise Exception(f"Conflict for action_tab[{i}, {t}]")
                 action_tab[i, t] = act
                 continue
-            # if [S' -> S.] is in CANON[i], then set ACTION[i, $] to ACCEPT
-            if it.head == start_sym and it.dot == 1:
-                if (curr := action_tab.get((i, ord('$')))) and curr!=(ACCEPT, ):
+            # if [S' -> S., $] is in LALR_SET[i], then set ACTION[i, $] to ACCEPT
+            if it.head == start_sym and it.look == EOI:
+                if (curr := action_tab.get((i, EOI))) and curr!=(ACCEPT, ):
                     raise Exception(f"Conflict for action_tab[{i}, $]")
-                action_tab[i, ord('$')] = (ACCEPT, )
+                action_tab[i, EOI] = (ACCEPT, )
                 continue
-            # if [A -> x.] is in CANON[i], then set ACTION[i, t] to
-            # (REDUCE, A -> x) for all t in FOLLOW(A).
+            # if [A -> x., t] is in LALR_SET[i], then set ACTION[i, t] to
+            # (REDUCE, A -> x).
             act = (REDUCE, (it.head, it.body))
-            for t in follow_tab[it.head]:
-                if (curr := action_tab.get((i, t))) and curr != act:
-                    raise Exception(f"Conflict for action_tab[{i}, {t}]")
-                action_tab[i, t] = act
+            if (curr := action_tab.get((i, it.look))) and curr != act:
+                raise Exception(f"Conflict for action_tab[{i}, {it.look}]")
+            action_tab[i, it.look] = act
 
-    for i in range(canon_n):
+    for i in range(lalr_set_n):
         for t in symbols:
             if type(t) != int:
                 continue
@@ -592,16 +636,15 @@ if __name__ == "__main__":
     augment_grammar()
     compute_first_tab()
     compute_follow_tab()
-    compute_canon_and_goto_tab()
-    #compute_action_tab()
-    print_canon()
+    compute_canon()
     compute_look_tab()
-    print_look_tab()
     compute_lalr_set()
-    print_lalr_set()
-    #print_action_tab()
-    #print_goto_tab()
+    compute_goto_tab()
+    compute_action_tab()
 
-    #import pickle
-    #with open("slr-tab", "wb") as f:
-        #pickle.dump((start_state, action_tab, goto_tab), f)
+    print_action_tab()
+    print_goto_tab()
+
+    import pickle
+    with open("lalr-tab", "wb") as f:
+        pickle.dump((start_state, action_tab, goto_tab), f)
