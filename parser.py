@@ -51,6 +51,6 @@ def parse():
 if __name__ == "__main__":
     import pickle
     with open("lalr-tab", "rb") as f:
-        start_state, action_tab, goto_tab = pickle.load(f)
+        start_state, action_tab, goto_tab, sym_states = pickle.load(f)
 
     parse()

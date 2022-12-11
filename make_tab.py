@@ -1,4 +1,5 @@
 import sys
+from typing import Union
 from collections import namedtuple
 
 # These are defined in "lexer.h"
@@ -12,26 +13,30 @@ SHIFT = 0
 REDUCE = 1
 ACCEPT = 2
 ERROR = -3
+if ERROR >= 0:
+    raise Exception("ERROR should be set to a negative value")
 
 Token = namedtuple("Token", ["type", "str_val"])
 LR0Item = namedtuple("Item", ["head", "body", "dot"])
 Item = namedtuple("Item", ["head", "body", "dot", "look"])
 
-productions = dict()
-symbols = list()
-start_sym = ""
-tk = Token(0, 0)
-tk_n = 0
-curr_head = ""
-curr_prod = list()
-first_tab = dict()
-follow_tab = dict()
-canon = list()
-canon_kerns = list()
-look_tab = dict()
-lalr_set = list()
-lalr_set_n = 0
-goto_tab = dict()
+productions: dict[str, list[tuple]] = dict()
+terms: list[int] = list()
+nonterms: list[str] = list()
+start_sym: str = ""
+tk: Token = Token(0, 0)
+tk_n: int = 0
+curr_head: str = ""
+curr_prod: list = list()
+first_tab: dict[Union[int, str], list[int]] = dict()
+follow_tab: dict[str, list[int]] = dict()
+canon: list[list[LR0Item]] = list()
+canon_kerns: list[list[LR0Item]] = list()
+look_tab: dict[tuple[int, int], list[int]] = dict()
+lalr_set: list[list[Item]] = list()
+lalr_set_n: int = 0
+state_to_sym: dict[int, Union[int, str]] = dict()
+goto_tab: dict[tuple[int, Union[int, str]], int] = dict()
 action_tab = dict()
 canon_n = 0
 start_lr0_item = None
@@ -69,28 +74,26 @@ def print_grammar():
 
 def print_symbols():
     print("symbols: {", end=" ")
-    for s in symbols:
-        print(repr_sym(s), end=", ")
+    for t in terms:
+        print(chr(t), end=", ")
+    for nt in nonterms:
+        print(nt, end=", ")
     print("}")
 
 def print_first_tab():
     print("FIRST_TAB")
-    for sym in symbols:
-        if type(sym) == int:
-            continue
-        print("FIRST(", repr_sym(sym), ") = { ", sep="", end="")
-        for s in first_tab[sym]:
-            print(repr_sym(s), end=", ")
+    for nt in nonterms:
+        print("FIRST(", nt, ") = { ", sep="", end="")
+        for t in first_tab[nt]:
+            print(chr(t), end=", ")
         print("}")
 
 def print_follow_tab():
     print("FOLLOW_TAB")
-    for sym in symbols:
-        if type(sym) == int:
-            continue
-        print("FOLLOW(", repr_sym(sym), ") = { ", sep="", end="")
-        for s in follow_tab[sym]:
-            print(repr_sym(s), end=", ")
+    for nt in nonterms:
+        print("FOLLOW(", nt, ") = { ", sep="", end="")
+        for t in follow_tab[nt]:
+            print(chr(t), end=", ")
         print("}")
 
 def print_lr0_item(it):
@@ -153,12 +156,17 @@ def print_lalr_set():
             print()
         print()
 
+def print_sym_states():
+    print("SYM_STATES")
+    for st, sym in state_to_sym.items():
+        print(f"\t{st}:\t{repr_sym(sym)}")
+
 def print_goto_tab():
     print("GOTO")
     for i in range(canon_n):
         print("\t", i)
-        for nt in symbols:
-            if type(nt) != str or nt == start_sym:
+        for nt in nonterms:
+            if nt == start_sym:
                 continue
             print("\t\t", nt, "\t", goto_tab[i, nt])
 
@@ -166,10 +174,19 @@ def print_action_tab():
     print("ACTION")
     for i in range(canon_n):
         print("\t", i)
-        for t in symbols:
-            if type(t) != int:
-                continue
-            print("\t\t", repr_sym(t), "\t", action_tab[i, t])
+        for t in terms:
+            print("\t\t", repr_sym(t), end="\t")
+            act = action_tab[i, t]
+            if act[0] == SHIFT:
+                print("S\t", act[1])
+            elif act[0] == REDUCE:
+                print("R\t", act[1][0], "->", [repr_sym(s) for s in act[1][1]])
+            elif act[0] == ACCEPT:
+                print("ACC")
+            elif act[0] == ERROR:
+                print("ERR")
+            else:
+                raise Exception("invalid action found in action_tab")
 
 def expected(exp):
     raise Exception(
@@ -201,13 +218,17 @@ def skip_tks(chars):
 
 def add_sym(sym):
     curr_prod.append(sym)
-    if sym not in symbols:
-        symbols.append(sym)
+    if type(sym) == int:
+        if sym not in terms:
+            terms.append(sym)
+        return
+    if sym not in nonterms:
+        nonterms.append(sym)
 
 def add_prod():
     global curr_prod
 
-    productions[curr_head].append(curr_prod.copy())
+    productions[curr_head].append(tuple(curr_prod))
     curr_prod = list()
 
 def parse_prods():
@@ -255,9 +276,9 @@ def parse_prods():
 def augment_grammar():
     global curr_prod, curr_head, start_sym
     curr_head = start_sym + "_s"
-    if curr_head in symbols:
+    if curr_head in nonterms:
         raise Exception(f"{curr_head} already exists")
-    symbols.append(curr_head)
+    nonterms.append(curr_head)
     productions[curr_head] = list()
     curr_prod = list()
     add_sym(start_sym)
@@ -310,14 +331,14 @@ def first_of_string(sym_str):
     return fst
 
 def compute_first_tab():
-    for sym in symbols:
-        first(sym)
+    for t in terms:
+        first(t)
+    for nt in nonterms:
+        first(nt)
 
 def compute_follow_tab():
-    for sym in symbols:
-        if type(sym) == int:
-            continue
-        follow_tab[sym] = list()
+    for nt in nonterms:
+        follow_tab[nt] = list()
 
     follow_tab[start_sym] = [EOI]
     added_to_follow = True
@@ -387,7 +408,7 @@ def closure(items):
             if it.dot == len(it.body) or type(it.body[it.dot]) != str:
                 continue
             for prod in productions[it.body[it.dot]]:
-                for t in first_of_string(it.body[it.dot+1:] + [it.look]):
+                for t in first_of_string(list(it.body[it.dot+1:]) + [it.look]):
                     if type(t) != int:
                         continue
                     nit = Item(head=it.body[it.dot], body=prod, dot=0, look=t)
@@ -425,7 +446,7 @@ def compute_canon():
     while added_to_canon:
         added_to_canon = False
         for items in canon:
-            for sym in symbols:
+            for sym in terms + nonterms:
                 gt = lr0_goto(items, sym)
                 if not gt or gt in canon:
                     continue
@@ -443,8 +464,8 @@ def compute_canon_kerns():
         ])
 
 def determine_lookaheads(kernel, sym):
-    spont_gen = dict()
-    propagate = dict()
+    spont_gen: dict[int, list[Item]] = dict()
+    propagate: dict[int, list[Item]] = dict()
     for i, it in enumerate(kernel):
         j = closure([Item(head=it.head, body=it.body, dot=it.dot, look=NG)])
         for im in j:
@@ -515,7 +536,7 @@ def compute_look_tab():
     look_tab[start_state, si_i].append(EOI)
 
     for k, kern in enumerate(canon_kerns):
-        for sym in symbols:
+        for sym in terms + nonterms:
             sp_gen, prop = determine_lookaheads(kern, sym)
             for lk, items in sp_gen.items():
                 for it in items:
@@ -552,33 +573,34 @@ def compute_lalr_set():
         lalr_set.append(closure(lalr_kern))
         lalr_set_n += 1
 
-def compute_goto_tab():
+def compute_goto_tab_and_sym_states():
     if goto_tab:
         raise Exception("goto_tab is not empty")
     for i, items in enumerate(lalr_set):
-        for sym in symbols:
+        for sym in terms + nonterms:
             gt = goto(items, sym)
             if not gt:
                 goto_tab[i, sym] = ERROR
                 continue
-            already_in_lalr = False
-            for _i, _items in enumerate(lalr_set):
+            l = ERROR
+            for ls, l_itms in enumerate(lalr_set):
                 in_lalr = True
                 for it in gt:
-                    if it not in _items:
+                    if it not in l_itms:
                         in_lalr = False
                         break
                 if in_lalr:
-                    if already_in_lalr:
+                    if l >= 0:
                         raise Exception(
                             "goto found more than once in lalr_set"
                         )
-                    goto_tab[i, sym] = _i
-                    already_in_lalr = True
-                    break
-            if already_in_lalr:
-                continue
-            goto_tab[i, sym] = ERROR
+                    l = ls
+                    if (ss := state_to_sym.get(ls)) and ss != sym:
+                        raise Exception(
+                            f"state {ls} corresponds to more than one sym"
+                        )
+                    state_to_sym[ls] = sym
+            goto_tab[i, sym] = l
 
 def compute_action_tab():
     for i, items in enumerate(lalr_set):
@@ -611,9 +633,7 @@ def compute_action_tab():
             action_tab[i, it.look] = act
 
     for i in range(lalr_set_n):
-        for t in symbols:
-            if type(t) != int:
-                continue
+        for t in terms:
             if not action_tab.get((i, t)):
                 action_tab[i, t] = (ERROR, )
 
@@ -627,7 +647,7 @@ def parse_bn():
     next_token()
     skip_tks(">::=")
     curr_head = start_sym
-    symbols.append(curr_head)
+    nonterms.append(curr_head)
     productions[curr_head] = list()
     parse_prods()
 
@@ -639,12 +659,13 @@ if __name__ == "__main__":
     compute_canon()
     compute_look_tab()
     compute_lalr_set()
-    compute_goto_tab()
+    compute_goto_tab_and_sym_states()
     compute_action_tab()
 
     print_action_tab()
     print_goto_tab()
+    print_sym_states()
 
     import pickle
     with open("lalr-tab", "wb") as f:
-        pickle.dump((start_state, action_tab, goto_tab), f)
+        pickle.dump((start_state, action_tab, goto_tab, state_to_sym), f)
