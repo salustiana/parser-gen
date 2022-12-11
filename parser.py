@@ -1,7 +1,7 @@
 import sys
 from collections import namedtuple
 
-from make_tab import SHIFT, REDUCE, ACCEPT
+from make_tab import repr_sym, SHIFT, REDUCE, ACCEPT
 
 Token = namedtuple("Token", ["type", "str_val"])
 
@@ -39,7 +39,7 @@ def parse():
             for _ in range(len(act[1][1])):
                 stack.pop()
             stack.append(goto_tab[stack[-1], act[1][0]])
-            print(act[1][0], "->", act[1][1])
+            print(act[1][0], "->", [repr_sym(s) for s in act[1][1]])
         elif act[0] == ACCEPT:
             break
         else:
